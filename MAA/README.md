@@ -1,4 +1,3 @@
-<font face='Times'>
 # GOC-VRPTW-MAA
 Implement Multi-Agent Algorithm
 ## Introduction
