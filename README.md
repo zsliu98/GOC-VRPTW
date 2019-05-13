@@ -1,2 +1,2 @@
-# GOC-VRPTW-MAA
-Implement Multi-Agent Algorithm on Vehicle Routing Problem with Time Windows
+# GOC-VRPTW
+Implement Several Algorithms on Vehicle Routing Problem with Time Windows, Recharging Stations and other Constraints
