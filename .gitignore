@@ -1,4 +1,6 @@
 *.xlsx
 *.txt
+*.csv
 *.iml
 *.xml
+*.pyc

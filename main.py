@@ -2,7 +2,7 @@ from tools import DataTaker
 
 
 def main():
-    dt = DataTaker()
+    pass
 
 
 if __name__ == '__main__':
