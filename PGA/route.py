@@ -1,6 +1,9 @@
 from tools import GlobalMap
 
 center_id = 0
+custom_number = 1000
+station_number = 100
+
 max_volume = 16
 max_weight = 2.5
 unload_time = 0.5
@@ -21,29 +24,31 @@ class Route:
         self.punish = punish
         self.start_time = depot_open_time
         self.cost = 0
-        self.served_w = 0
-        self.served_v = 0
+        self.served_w, self.served_v = 0, 0
         self.extra_t = 0
-        self.refresh_cost()
+        self.refresh_state()
 
-    def refresh_cost(self, reset_window=True):
+    def refresh_state(self, reset_window=True):
+        """
+        refresh state of this route
+        :param reset_window: if time window is reset to the last serve time after time window punish
+        :return:
+        """
         self.start_time = depot_open_time
         self.cost = 0
-        self.served_w = 0
-        self.served_v = 0
+        self.served_w, self.served_v = 0, 0
         self.extra_t = 0
         time = depot_open_time
         distance = 0
         capacity = driving_range
-        volume = max_volume
-        weight = max_weight
-        pre_node = 0
+        weight, volume = max_weight, max_volume
+        pre_node = center_id
         extra_time = []
         for node in self.sequence:
             d = self.g_map.get_distance(pre_node, node)
             t = self.g_map.get_time(pre_node, node)
             capacity -= d
-            if node > 1000:
+            if node > custom_number:
                 time += t + charge_tm
                 distance += d
                 self.cost += charge_cost + unit_trans_cost * d  # regular cost
@@ -80,7 +85,7 @@ class Route:
         self.cost += self.punish * capacity if capacity < 0 else 0  # battery capacity punish
         if time > 24.:  # time window self.punish
             self.cost += self.punish * abs(time - 24.)
-            extra_time.append(1)
+            extra_time.append(-1)
         else:
             extra_time.append(24. - time)
         self.extra_t = max(0, min(extra_time))
