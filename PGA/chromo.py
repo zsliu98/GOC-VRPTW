@@ -1,4 +1,7 @@
+from typing import List
 import random
+import math
+
 from tools import GlobalMap
 from PGA.route import Route
 
@@ -9,20 +12,21 @@ random_add_station = 2
 
 max_volume = 16
 max_weight = 2.5
+starve_para = 0.25
 unload_time = 0.5
 driving_range = 120000
 charge_tm = 0.5
 charge_cost = 50
 wait_cost = 24
 depot_wait = 1
-depot_open_time = 16.  # suppose first vehicle start at 8:00
+depot_open_time = 16.
 unit_trans_cost = 14. / 1000
 vehicle_cost = 300
 
 
 class Chromo:
     g_map: GlobalMap
-    sequence: list
+    sequence: List[Route]
 
     def __init__(self, sequence=None, g_map=None, idx=0, punish=9999, reset_window=True):
         self.idx = idx
@@ -46,7 +50,7 @@ class Chromo:
         self.vehicle_number = len(self.sequence)
         start_list = [depot_open_time]
         for route in self.sequence:
-            assert isinstance(route, Route)
+            route.refresh_state()
             self.cost += route.cost  # pure route cost
             self.cost += vehicle_cost  # new vehicle cost
             start_list.append(route.start_time)  # record each route start time
@@ -75,11 +79,8 @@ class Chromo:
         random init this chromo by some prior experience (when no data is given)
         :return: None
         """
-        # random add charging station and shuffle all customer and station
-        temp_station = random_add_station * list(range(custom_number + 1, custom_number + station_number + 1))
-        random.shuffle(temp_station)
-        temp_station = temp_station[:int((random.random() / 2 + 0.1) * random_add_station)]
-        temp_node = list(range(1, custom_number + 1)) + temp_station
+        # shuffle all customer randomly
+        temp_node = list(range(1, custom_number + 1))
         random.shuffle(temp_node)
 
         # init all route, i.e. self.sequence
@@ -87,20 +88,55 @@ class Chromo:
         weight, volume = max_weight, max_volume
         temp_route = []
         pre_node = center_id
-        for node in temp_node:
+        for idx, node in enumerate(temp_node):
             capacity -= self.g_map.get_distance(pre_node, node)
-            if node <= custom_number:
-                demand = self.g_map.get_demand(node)
-                weight -= demand[0]
-                volume -= demand[1]
-            else:
-                capacity = driving_range
+            demand = self.g_map.get_demand(node)
+            weight -= demand[0]
+            volume -= demand[1]
             if capacity < 0 or weight < 0 or volume < 0:
-                time_weight = random.random()
-                temp_route.sort(key=lambda x: time_weight * self.g_map.get_window(x)[0]
-                                + (1 - time_weight) * self.g_map.get_window(x)[1])
-                self.sequence.append(Route(sequence=temp_route, g_map=self.g_map, punish=self.punish))
-                capacity = driving_range
-                weight, volume = max_weight, max_volume
-                temp_route = []
-                pre_node = center_id
+                insert_station_p = (math.exp(min(weight / max_weight, volume / max_volume)) - 1) / (math.e - 1)
+                if weight < 0 or volume < 0:
+                    insert_station_p = 0
+                next_station = self.g_map.get_nearby_station(pre_node)
+                if self.g_map.get_distance(pre_node, next_station) > capacity:
+                    insert_station_p = 0
+                if random.random() < insert_station_p:
+                    temp_route.append(self.g_map.get_nearby_station(node))
+                    temp_route.append(node)
+                    capacity += self.g_map.get_distance(pre_node, node)
+                    capacity -= self.g_map.get_distance(next_station, node)
+                    pre_node = node
+                else:
+                    self.sequence.append(Route(sequence=temp_route, g_map=self.g_map, punish=self.punish))
+                    capacity = driving_range
+                    weight, volume = max_weight, max_volume
+                    temp_route = []
+                    pre_node = center_id
+            else:
+                temp_route.append(node)
+                pre_node = node
+
+    def set_punish(self, punish):
+        self.punish = punish
+        for route in self.sequence:
+            route.set_punish(punish)
+
+    def clear(self, route: Route):
+        """
+        clear all node in the given route to prepare for the route insert
+        :param route: the route going to be inserted
+        :return: None
+        """
+        clear_list = route.sequence
+        for node in clear_list:
+            if node > custom_number:
+                continue
+            for route in self.sequence:
+                try:
+                    route.delete_node(node)
+                    break
+                except ValueError:
+                    pass
+
+    def mutate(self):
+        pass

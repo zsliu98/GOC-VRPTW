@@ -24,6 +24,8 @@ class Route:
         self.punish = punish
         self.start_time = depot_open_time
         self.cost = 0
+        self.window_punish, self.capacity_punish, self.weight_punish,  self.volume_punish = 0, 0, 0, 0
+        self.capacity_remain = 0
         self.served_w, self.served_v = 0, 0
         self.extra_t = 0
         self.refresh_state()
@@ -36,6 +38,8 @@ class Route:
         """
         self.start_time = depot_open_time
         self.cost = 0
+        self.window_punish, self.capacity_punish, self.weight_punish, self.volume_punish = 0, 0, 0, 0
+        self.capacity_remain = 0
         self.served_w, self.served_v = 0, 0
         self.extra_t = 0
         time = depot_open_time
@@ -51,8 +55,8 @@ class Route:
             if node > custom_number:
                 time += t + charge_tm
                 distance += d
-                self.cost += charge_cost + unit_trans_cost * d  # regular cost
-                self.cost += self.punish * capacity if capacity < 0 else 0  # battery capacity punish
+                self.cost += charge_cost + unit_trans_cost * d
+                self.capacity_punish += self.punish * capacity / driving_range if capacity < 0 else 0
                 capacity = driving_range  # recharge battery
             else:
                 self.cost += unit_trans_cost * d  # regular cost
@@ -63,7 +67,7 @@ class Route:
                     extra_time.append(window[1] - time)
                     time = window[0]
                 elif time > window[1]:
-                    self.cost += self.punish * (time - window[1])  # time window punish
+                    self.window_punish += self.punish * (time - window[1])
                     time = window[1] if reset_window else time
                     extra_time.append(-1)
                 else:
@@ -74,20 +78,29 @@ class Route:
                 volume -= demand[1]
                 self.served_w += demand[0]
                 self.served_v += demand[1]
-                self.cost += self.punish * abs(weight) if weight < 0 else 0  # weight negative punish
-                self.cost += self.punish * abs(volume) if volume < 0 else 0  # volume negative punish
-                self.cost += self.punish * abs(capacity) if capacity < 0 else 0  # battery capacity punish
+                self.weight_punish += self.punish * abs(weight) if weight < 0 else 0
+                self.volume_punish += self.punish * abs(volume) if volume < 0 else 0
+                self.capacity_punish += self.punish * abs(capacity) / driving_range if capacity < 0 else 0
+            pre_node = node
         d = self.g_map.get_distance(pre_node, center_id)
         t = self.g_map.get_time(pre_node, center_id)
         capacity -= d
+        self.capacity_remain = capacity
         time += t
         self.cost += unit_trans_cost * d  # regular cost
-        self.cost += self.punish * capacity if capacity < 0 else 0  # battery capacity punish
-        if time > 24.:  # time window self.punish
-            self.cost += self.punish * abs(time - 24.)
+        self.capacity_punish += self.punish * capacity if capacity < 0 else 0
+        if time > 24.:
+            self.window_punish += self.punish * abs(time - 24.)
             extra_time.append(-1)
         else:
             extra_time.append(24. - time)
         self.extra_t = max(0, min(extra_time))
         self.cost -= len(extra_time) * self.extra_t * wait_cost  # reduce wait cost
+        self.cost += self.window_punish + self.capacity_punish + self.weight_punish + self.volume_punish  # add punish
         self.start_time += self.extra_t
+
+    def set_punish(self, punish):
+        self.punish = punish
+
+    def delete_node(self, node: int):
+        self.sequence.remove(node)
