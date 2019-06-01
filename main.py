@@ -1,14 +1,30 @@
 import pandas as pd
 import numpy as np
+import pickle
 
-from tools import DataTaker
+from tools import GlobalMap
+from PGA import Nature
+from PGA import Chromo
+
+generation_num = 20
+chromo_num = 100
+save_dir = 'data/nature.pkl'
 
 
 def main():
-    dt = DataTaker()
-    table = dt.read_node()
-    print(list(table['first_receive_tm'][2:4]))
-    print(table['first_receive_tm'][2].hour + table['first_receive_tm'][2].minute / 60)
+    g_map = GlobalMap()
+    nature = Nature(chromo_list=[], chromo_num=chromo_num)
+    for generation in range(0, generation_num):
+        print('Generation {} start.'.format(generation))
+        nature.operate()
+        file = open(save_dir, 'wb')
+        pickle.dump(nature, file)
+        file.close()
+        best_cost = nature.get_best().cost
+        print('Best Cost: {}'.format(best_cost))
+    best_chromo = nature.get_best()
+    for route in best_chromo.sequence:
+        print(route.sequence)
 
 
 if __name__ == '__main__':

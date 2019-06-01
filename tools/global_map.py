@@ -6,7 +6,7 @@ from tools.data_taker import DataTaker
 
 class GlobalMap:
 
-    def __init__(self, read_dir):
+    def __init__(self, read_dir='data'):
         dt = DataTaker(read_dir=read_dir)
         self.distance_table = dt.read_distance()
         self.node_table = dt.read_node()

@@ -116,10 +116,10 @@ class Chromo:
                 temp_route.append(node)
                 pre_node = node
 
-    def set_punish(self, punish):
+    def set_punish_para(self, punish):
         self.punish = punish
         for route in self.sequence:
-            route.set_punish(punish)
+            route.set_punish_para(punish)
 
     def clear(self, route: Route):
         """
@@ -139,4 +139,41 @@ class Chromo:
                     pass
 
     def mutate(self):
+        max_s = max(self.sequence, lambda x: x.window_punish + x.weight_punish + x.volume_punish)
+        max_s_punish = max_s.window_punish + max_s.weight_punish + max_s.volume_punish
+        max_a_punish = max(self.sequence, lambda x: x.capacity_punish).capacity_punish
+        min_d_remain = min(self.sequence, lambda x: x.capacity_remain).capacity_remain
+        self.__split_mutate__(max_s_punish)
+        self.__add_mutate__(max_a_punish)
+        self.__delete_mutate__(min_d_remain)
+        self.__combine_mutate__()
+        self.__random_mutate__()
+
+    def __split_mutate__(self, max_punish):
+        if max_punish == 0:
+            return
+        origin_route = self.sequence.copy()
+        for route in origin_route:
+            split_p = (math.exp((route.window_punish + route.weight_punish + route.volume_punish) / max_punish) - 1) / (
+                    math.e - 1)
+            if random.random() < split_p:
+                new_routes = route.split_mutate()
+                self.sequence.remove(route)
+                del route
+                self.sequence.extend(new_routes)
+
+    def __add_mutate__(self, max_punish):
+        if max_punish == 0:
+            return
+        pass
+
+    def __delete_mutate__(self, min_remain):
+        if min_remain < 0.1 * driving_range:
+            return
+        pass
+
+    def __combine_mutate__(self):
+        pass
+
+    def __random_mutate__(self):
         pass

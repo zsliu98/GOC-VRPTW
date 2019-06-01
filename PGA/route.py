@@ -24,7 +24,7 @@ class Route:
         self.punish = punish
         self.start_time = depot_open_time
         self.cost = 0
-        self.window_punish, self.capacity_punish, self.weight_punish,  self.volume_punish = 0, 0, 0, 0
+        self.window_punish, self.capacity_punish, self.weight_punish, self.volume_punish = 0, 0, 0, 0
         self.capacity_remain = 0
         self.served_w, self.served_v = 0, 0
         self.extra_t = 0
@@ -34,7 +34,7 @@ class Route:
         """
         refresh state of this route
         :param reset_window: if time window is reset to the last serve time after time window punish
-        :return:
+        :return: None
         """
         self.start_time = depot_open_time
         self.cost = 0
@@ -99,8 +99,17 @@ class Route:
         self.cost += self.window_punish + self.capacity_punish + self.weight_punish + self.volume_punish  # add punish
         self.start_time += self.extra_t
 
-    def set_punish(self, punish):
+    def set_punish_para(self, punish):
         self.punish = punish
 
     def delete_node(self, node: int):
         self.sequence.remove(node)
+
+    def split_mutate(self):
+        pass
+
+    def get_volume_remain(self):
+        return (max_volume - self.served_v) / max_volume
+
+    def get_weight_remain(self):
+        return (max_weight - self.served_w) / max_weight
