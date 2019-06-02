@@ -1,3 +1,7 @@
+from typing import List
+import random
+import numpy as np
+
 from tools import GlobalMap
 
 center_id = 0
@@ -17,8 +21,9 @@ unit_trans_cost = 14. / 1000
 
 class Route:
     g_map: GlobalMap
+    sequence: List[int]
 
-    def __init__(self, sequence, g_map, punish=9999):
+    def __init__(self, sequence, g_map, punish=9999, refresh_im=True):
         self.sequence = sequence
         self.g_map = g_map
         self.punish = punish
@@ -28,7 +33,8 @@ class Route:
         self.capacity_remain = 0
         self.served_w, self.served_v = 0, 0
         self.extra_t = 0
-        self.refresh_state()
+        if refresh_im:
+            self.refresh_state()
 
     def refresh_state(self, reset_window=True):
         """
@@ -105,11 +111,47 @@ class Route:
     def delete_node(self, node: int):
         self.sequence.remove(node)
 
-    def split_mutate(self):
-        pass
-
     def get_volume_remain(self):
         return (max_volume - self.served_v) / max_volume
 
     def get_weight_remain(self):
         return (max_weight - self.served_w) / max_weight
+
+    def get_mean_time_window(self):
+        first_tm = [self.g_map.get_window(x)[0] for x in self.sequence]
+        last_tm = [self.g_map.get_window(x)[1] for x in self.sequence]
+        return sum(first_tm) / len(first_tm), sum(last_tm) / len(last_tm)
+
+    def split_mutate(self, p=0.618):
+        sequence1 = []
+        sequence2 = []
+        for node in self.sequence:
+            if random.random() < p:
+                sequence1.append(node)
+            else:
+                sequence2.append(node)
+        route1 = Route(sequence=sequence1, g_map=self.g_map, punish=self.punish)
+        route2 = Route(sequence=sequence2, g_map=self.g_map, punish=self.punish)
+        return route1, route2
+
+    def add_mutate(self):
+        add_pos = random.randint(int(len(self.sequence) / 4), int(len(self.sequence) * 3 / 4))
+        station = self.g_map.get_nearby_station(self.sequence[add_pos - 1])
+        self.sequence.insert(add_pos, station)
+
+    def delete_mutate(self):
+        temp_sequence = np.array(self.sequence)
+        temp_sequence = temp_sequence[temp_sequence > custom_number]
+        delete_pos = random.randint(0, len(temp_sequence) - 1)
+        self.sequence.remove(int(temp_sequence[delete_pos]))
+
+    def random_mutate(self):
+        pos1 = random.randint(0, len(self.sequence) - 1)
+        pos2 = random.randint(0, len(self.sequence) - 1)
+        if pos1 == pos2:
+            return
+        if pos1 > pos2:
+            pos1, pos2 = pos2, pos1
+        self.sequence = self.sequence[:pos1] + [self.sequence[pos2]] + self.sequence[pos1 + 1:pos2] \
+            + [self.sequence[pos1]] + self.sequence[pos2 + 1:]
+

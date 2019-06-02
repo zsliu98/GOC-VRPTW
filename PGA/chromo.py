@@ -38,6 +38,7 @@ class Chromo:
         self.vehicle_number = 0
         self.rank = 0
         if self.sequence is None:
+            self.sequence = []
             self.__random_init__()
         self.refresh_state()
 
@@ -142,14 +143,20 @@ class Chromo:
         max_s = max(self.sequence, lambda x: x.window_punish + x.weight_punish + x.volume_punish)
         max_s_punish = max_s.window_punish + max_s.weight_punish + max_s.volume_punish
         max_a_punish = max(self.sequence, lambda x: x.capacity_punish).capacity_punish
-        min_d_remain = min(self.sequence, lambda x: x.capacity_remain).capacity_remain
+        max_d_remain = max(self.sequence, lambda x: x.capacity_remain).capacity_remain
         self.__split_mutate__(max_s_punish)
         self.__add_mutate__(max_a_punish)
-        self.__delete_mutate__(min_d_remain)
+        self.__delete_mutate__(max_d_remain)
         self.__combine_mutate__()
         self.__random_mutate__()
 
     def __split_mutate__(self, max_punish):
+        """
+        if window, weight or volume punish exist, randomly split the route into two routes
+        if no window, weight or volume punish exists, nothing will be done
+        :param max_punish: max total window, weight and volume punish, use for normalization
+        :return: None
+        """
         if max_punish == 0:
             return
         origin_route = self.sequence.copy()
@@ -163,17 +170,66 @@ class Chromo:
                 self.sequence.extend(new_routes)
 
     def __add_mutate__(self, max_punish):
+        """
+        if capacity punish exists, randomly add a charging station into the route
+        if no capacity punish exists, nothing will be done
+        :param max_punish: max capacity punish, use for normalization
+        :return: None
+        """
         if max_punish == 0:
             return
-        pass
+        for route in self.sequence:
+            add_p = (math.exp(route.capacity_punish / max_punish) - 1) / (math.e - 1)
+            if random.random() < add_p:
+                route.add_mutate()
 
-    def __delete_mutate__(self, min_remain):
-        if min_remain < 0.1 * driving_range:
+    def __delete_mutate__(self, max_remain):
+        """
+        if too much capacity remain, randomly delete a charging station (if exists)
+        :param max_remain: max capacity remain, use for normalization
+        :return: None
+        """
+        if max_remain < 0.1 * driving_range:
             return
-        pass
+        for route in self.sequence:
+            add_p = (math.exp(route.capacity_remain / max_remain) - 1) / (math.e - 1)
+            if random.random() < add_p:
+                route.delete_mutate()
 
     def __combine_mutate__(self):
-        pass
+        """
+        if too much cargo not be delivered in route (i.e. too few customers are served), combine two
+        :return: None
+        """
+        route1 = min(self.sequence, key=lambda x: x.served_w)
+        self.sequence.remove(route1)
+        route2 = min(self.sequence, key=lambda x: x.served_v)
+        self.sequence.remove(route2)
+        if route1.served_v + route2.served_v < max_volume and route1.served_w + route2.served_w < max_weight:
+            self.sequence.append(self.__combine__(route1, route2))
+            self.sequence[-1].refresh_state()
+        else:
+            new_route = self.__combine__(route1, route2)
+            self.sequence.extend(new_route.split_mutate())
+            del new_route
+        del route1
+        del route2
 
     def __random_mutate__(self):
-        pass
+        """
+        add little perturbation to route
+        :return: None
+        """
+        mutate_pos = random.randint(0, len(self.sequence) - 1)
+        self.sequence[mutate_pos].random_mutate()
+
+    def __combine__(self, route1: Route, route2: Route):
+        if sum(route1.get_mean_time_window()) > sum(route2.get_mean_time_window()):
+            route1, route2 = route2, route1
+        route_distance = self.g_map.get_distance(route1.sequence[-1], route2.sequence[0])
+        if route1.capacity_remain + route2.capacity_remain - route_distance > driving_range:
+            new_sequence = route1.sequence + route2.sequence
+        else:
+            new_station = self.g_map.get_nearby_station(route1.sequence[-1])
+            new_sequence = route1.sequence + [new_station] + route2.sequence
+        return Route(sequence=new_sequence, g_map=self.g_map, punish=self.punish, refresh_im=False)

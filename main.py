@@ -13,7 +13,7 @@ save_dir = 'data/nature.pkl'
 
 def main():
     g_map = GlobalMap()
-    nature = Nature(chromo_list=[], chromo_num=chromo_num)
+    nature = Nature(chromo_list=[], chromo_num=chromo_num, g_map=g_map, new_chromo_num=5)
     for generation in range(0, generation_num):
         print('Generation {} start.'.format(generation))
         nature.operate()

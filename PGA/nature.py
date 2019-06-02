@@ -7,7 +7,7 @@ from PGA.chromo import Chromo
 class Nature:
     chromo_list: List[Chromo]
 
-    def __init__(self, chromo_list, chromo_num, g_map=None, new_chromo_num=1, punish_increase=1.1,
+    def __init__(self, chromo_list, chromo_num, g_map, new_chromo_num=1, punish_increase=1.1,
                  reserve=0.3, bad_reserve_p=0.1):
         self.chromo_list = chromo_list
         self.chromo_num = chromo_num
@@ -33,23 +33,32 @@ class Nature:
             chromo.set_punish_para(punish=new_punish)
             chromo.refresh_state()
         self.__ranking__()
+        print('Ranking OK.')
         bad_chromo_list = []
         for chromo in self.chromo_list[int(self.reserve * len(self.chromo_list)):]:
             if random.random() < self.bad_reserve_p:
                 bad_chromo_list.append(chromo)
         self.chromo_list = self.chromo_list[:int(self.reserve * len(self.chromo_list))]
         self.chromo_list.extend(bad_chromo_list)
-        chromo_copy_1 = self.chromo_list.copy()
-        chromo_copy_2 = self.chromo_list[1:]
-        chromo_copy_2.append(self.chromo_list[0])
+        print('Select OK.')
+        chromo_copy1 = self.chromo_list.copy()
+        chromo_copy2 = self.chromo_list[1:]
+        chromo_copy2.append(self.chromo_list[0])
         self.chromo_list[:] = []
-        for chromo1, chromo2 in zip(chromo_copy_1, chromo_copy_2):
-            self.chromo_list.extend(self.__crossover__(chromo1, chromo2))
+        for chromo1, chromo2 in zip(chromo_copy1, chromo_copy2):
+            if random.random() < 0.5:
+                self.__crossover__(chromo1, chromo2)
+        print('Cross OK.')
         for chromo in self.chromo_list:
             chromo.mutate()
+        print('Mutate OK.')
         self.__random_add__(num=self.chromo_num - len(self.chromo_list))
 
     def get_best(self):
+        """
+        return current best chromo/solution
+        :return: best chromo
+        """
         return min(self.chromo_list, key=lambda x: x.cost)
 
     def __ranking__(self):
@@ -57,8 +66,8 @@ class Nature:
         give rank to each chromo in chromo list and sort by rank
         :return: None
         """
-        # self.chromo_list.sort(key=lambda x: x.cost)
-        for chromo in self.chromo_list:
+        self.chromo_list.sort(key=lambda x: x.cost)
+        '''for chromo in self.chromo_list:
             chromo.reset_rank()
         temp_list = self.chromo_list.copy()
         while temp_list:
@@ -80,7 +89,7 @@ class Nature:
                 if cost < cost_bound or vehicle_num < vehicle_num_bound:
                     chromo.rank = rank
                     temp_list.remove(chromo)
-        self.chromo_list.sort(key=lambda x: x.rank)
+        self.chromo_list.sort(key=lambda x: x.rank)'''
 
     @staticmethod
     def __crossover__(chromo1: Chromo, chromo2: Chromo):
@@ -98,7 +107,6 @@ class Nature:
         chromo2.sequence.append(route1)
         chromo1.refresh_state()
         chromo2.refresh_state()
-        return chromo1, chromo2
 
     def __hill_climbing__(self):
         pass
