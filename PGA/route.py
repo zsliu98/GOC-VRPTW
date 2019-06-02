@@ -165,6 +165,7 @@ class Route:
             return
         delete_pos = random.randint(0, len(temp_sequence) - 1)
         self.sequence.remove(int(temp_sequence[delete_pos]))
+        del temp_sequence
 
     def reschedule_mutate(self):
         temp_sequence = self.sequence.copy()

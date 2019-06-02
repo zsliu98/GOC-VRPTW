@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import pickle
+from pympler import tracker, muppy, summary
 
 from tools import GlobalMap, pickle_dump, pickle_load
 from PGA import Nature
@@ -40,6 +41,10 @@ def main():
         print('Total {} Chromo.'.format(len(nature.chromo_list)))
         print('Best Cost: {}\tRoute Num: {}\tPunish Num: {}'.format(best.cost, len(best.sequence),
                                                                     best.has_punish_num()))
+        #  this is memory watcher
+        #  all_objects = muppy.get_objects()
+        #  sum1 = summary.summarize(all_objects)
+        #  summary.print_(sum1)
         if generation % 10 == 9:
             if save:
                 pickle_dump(nature, file_path=save_dir)

@@ -256,3 +256,10 @@ class Chromo:
             new_station = self.g_map.get_nearby_station(route1.sequence[-1])
             new_sequence = route1.sequence + [new_station] + route2.sequence
         return Route(sequence=new_sequence, g_map=self.g_map, punish=self.punish, refresh_im=False)
+
+    def deepcopy(self):
+        r_sequence = []
+        for route in self.sequence:
+            n_sequence = route.sequence.copy()
+            r_sequence.append(Route(sequence=n_sequence, g_map=self.g_map, punish=self.punish))
+        return Chromo(sequence=r_sequence, g_map=self.g_map, punish=self.punish)

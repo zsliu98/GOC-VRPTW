@@ -26,7 +26,7 @@ class GlobalMap:
                 print('Error may occur. Distance has been asked between two identical position.')
             return 0
         else:
-            return self.distance_table['distance'][self.__get_index__(idx, idy)]
+            return float(self.distance_table['distance'][self.__get_index__(idx, idy)])
 
     def get_time(self, idx, idy):
         """
@@ -40,7 +40,7 @@ class GlobalMap:
                 print('Error may occur. Travel time has been asked between two identical position.')
             return 0
         else:
-            return self.distance_table['spend_tm'][self.__get_index__(idx, idy)] / 60
+            return float(self.distance_table['spend_tm'][self.__get_index__(idx, idy)]) / 60
 
     def get_window(self, idx):
         """
@@ -50,8 +50,10 @@ class GlobalMap:
         """
         first_tm: datetime.time = self.node_table['first_receive_tm'][idx]
         last_tm: datetime.time = self.node_table['last_receive_tm'][idx]
-        first = first_tm.hour + first_tm.minute / 60
-        last = last_tm.hour + last_tm.minute / 60
+        first = float(first_tm.hour + first_tm.minute / 60)
+        last = float(last_tm.hour + last_tm.minute / 60)
+        del first_tm
+        del last_tm
         return first, last
 
     def get_demand(self, idx):

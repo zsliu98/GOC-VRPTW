@@ -38,9 +38,9 @@ class Nature:
                 bad_chromo_list.append(chromo)
         self.chromo_list = self.chromo_list[:int(self.reserve * len(self.chromo_list))]
         self.chromo_list.extend(bad_chromo_list)
-        old_chromo_list = copy.deepcopy(self.chromo_list)
+        old_chromo_list = self.chromo_list.copy()
         print('Select OK.', end='\t')
-        chromo_copy1 = copy.deepcopy(self.chromo_list)
+        chromo_copy1 = self.chromo_list.copy()
         chromo_copy2 = self.chromo_list[1:]
         chromo_copy2.append(self.chromo_list[0])
         self.chromo_list[:] = []
@@ -50,11 +50,14 @@ class Nature:
                 if r == 1:
                     self.chromo_list.append(chromo1)
                     self.chromo_list.append(chromo2)
-        print('Cross OK.', end='\t')
+        print('Cross OK{}.'.format(len(self.chromo_list)), end='\t')
+        del chromo_copy1
+        del chromo_copy2
         self.__ranking__()
         for idx, chromo in enumerate(self.chromo_list):
             chromo.mutate()
         self.chromo_list.extend(old_chromo_list)
+        del old_chromo_list
         print('Mutate OK.', end='\t')
         self.__random_add__(num=self.chromo_num - len(self.chromo_list))
         print('New Chromo Add OK.')
@@ -76,6 +79,8 @@ class Nature:
         give rank to each chromo in chromo list and sort by rank
         :return: None
         """
+        for chromo in self.chromo_list:
+            chromo.refresh_state()
         self.chromo_list.sort(key=lambda x: x.cost)
         '''for chromo in self.chromo_list:
             chromo.reset_rank()
@@ -121,6 +126,8 @@ class Nature:
             return chromo1, chromo2, -1
         route1 = sequence1[random.randint(0, len(sequence1) - 1)]
         route2 = sequence2[random.randint(0, len(sequence2) - 1)]
+        chromo1 = chromo1.deepcopy()
+        chromo2 = chromo2.deepcopy()
         chromo1.clear(route2)
         chromo2.clear(route1)
         chromo1.sequence.append(route2)
