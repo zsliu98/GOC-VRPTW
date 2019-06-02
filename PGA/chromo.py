@@ -5,6 +5,8 @@ import math
 from tools import GlobalMap
 from PGA.route import Route
 
+random_mutate_p = 0.1
+
 center_id = 0
 custom_number = 1000
 station_number = 100
@@ -140,15 +142,24 @@ class Chromo:
                     pass
 
     def mutate(self):
-        max_s = max(self.sequence, lambda x: x.window_punish + x.weight_punish + x.volume_punish)
+        max_s = max(self.sequence, key=lambda x: x.window_punish + x.weight_punish + x.volume_punish)
         max_s_punish = max_s.window_punish + max_s.weight_punish + max_s.volume_punish
-        max_a_punish = max(self.sequence, lambda x: x.capacity_punish).capacity_punish
-        max_d_remain = max(self.sequence, lambda x: x.capacity_remain).capacity_remain
+        max_a_punish = max(self.sequence, key=lambda x: x.capacity_punish).capacity_punish
+        max_d_remain = max(self.sequence, key=lambda x: x.capacity_remain).capacity_remain
         self.__split_mutate__(max_s_punish)
         self.__add_mutate__(max_a_punish)
         self.__delete_mutate__(max_d_remain)
         self.__combine_mutate__()
-        self.__random_mutate__()
+        self.__reschedule_mutate__()
+        if random.random() < random_mutate_p:
+            self.__random_mutate__()
+
+    def has_punish_num(self):
+        num = 0
+        for route in self.sequence:
+            if route.get_if_punish():
+                num += 1
+        return num
 
     def __split_mutate__(self, max_punish):
         """
@@ -189,12 +200,17 @@ class Chromo:
         :param max_remain: max capacity remain, use for normalization
         :return: None
         """
+        for route in self.sequence:
+            if not route.has_customer():
+                self.sequence.remove(route)
         if max_remain < 0.1 * driving_range:
             return
         for route in self.sequence:
             add_p = (math.exp(route.capacity_remain / max_remain) - 1) / (math.e - 1)
             if random.random() < add_p:
                 route.delete_mutate()
+            if not route.has_customer():
+                self.sequence.remove(route)
 
     def __combine_mutate__(self):
         """
@@ -210,10 +226,17 @@ class Chromo:
             self.sequence[-1].refresh_state()
         else:
             new_route = self.__combine__(route1, route2)
-            self.sequence.extend(new_route.split_mutate())
+            new_routes = new_route.split_mutate()
+            if (len(new_routes) == 1 and new_routes[0].cost + vehicle_cost < route1.cost + route2.cost) \
+                    or (len(new_routes) == 2 and new_routes[0].cost + new_routes[1].cost < route1.cost + route2.cost):
+                self.sequence.extend(new_route.split_mutate())
+                self.sequence[-1].refresh_state()
+                self.sequence[-2].refresh_state()
             del new_route
-        del route1
-        del route2
+
+    def __reschedule_mutate__(self):
+        mutate_pos = random.randint(0, len(self.sequence) - 1)
+        self.sequence[mutate_pos].reschedule_mutate()
 
     def __random_mutate__(self):
         """

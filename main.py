@@ -2,27 +2,51 @@ import pandas as pd
 import numpy as np
 import pickle
 
-from tools import GlobalMap
+from tools import GlobalMap, pickle_dump, pickle_load
 from PGA import Nature
 from PGA import Chromo
+from PGA import Route
 
-generation_num = 20
-chromo_num = 100
+load = False
+save = True  # warning: if save set to be true, it may save the 'nature' to save_dir, which is up to 20GB
+generation_num = 100
+chromo_num = 120
+_punish = 9999
 save_dir = 'data/nature.pkl'
 
 
 def main():
     g_map = GlobalMap()
-    nature = Nature(chromo_list=[], chromo_num=chromo_num, g_map=g_map, new_chromo_num=5)
+    '''
+    route = Route(sequence=[371], g_map=g_map)
+    print(g_map.get_distance(1,2))
+    for node in range(0, 1101):
+        print(g_map.get_nearby_station(node))
+    '''
+    if not load:
+        nature = Nature(chromo_list=[], chromo_num=chromo_num, g_map=g_map, new_chromo_num=5)
+    else:
+        try:
+            nature = pickle_load(save_dir)
+        except FileNotFoundError or EOFError:
+            nature = Nature(chromo_list=[], chromo_num=chromo_num, g_map=g_map, new_chromo_num=5)
+
+    punish = _punish
+
     for generation in range(0, generation_num):
         print('Generation {} start.'.format(generation))
         nature.operate()
-        file = open(save_dir, 'wb')
-        pickle.dump(nature, file)
-        file.close()
-        best_cost = nature.get_best().cost
-        print('Best Cost: {}'.format(best_cost))
-    best_chromo = nature.get_best()
+        best: Chromo = nature.get_best()
+        print('Total {} Chromo.'.format(len(nature.chromo_list)))
+        print('Best Cost: {}\tRoute Num: {}\tPunish Num: {}'.format(best.cost, len(best.sequence),
+                                                                    best.has_punish_num()))
+        if generation % 10 == 9:
+            if save:
+                pickle_dump(nature, file_path=save_dir)
+            punish *= 1.1
+            nature.set_new_punish(new_punish=punish)
+
+    best_chromo: Chromo = nature.get_best()
     for route in best_chromo.sequence:
         print(route.sequence)
 

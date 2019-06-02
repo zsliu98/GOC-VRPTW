@@ -1,20 +1,22 @@
 from typing import List
 import random
+import copy
 
 from PGA.chromo import Chromo
+
+cross_p = 0.2
 
 
 class Nature:
     chromo_list: List[Chromo]
 
-    def __init__(self, chromo_list, chromo_num, g_map, new_chromo_num=1, punish_increase=1.1,
-                 reserve=0.3, bad_reserve_p=0.1):
+    def __init__(self, chromo_list, chromo_num, g_map, new_chromo_num=1,
+                 reserve=0.4, bad_reserve_p=0.1):
         self.chromo_list = chromo_list
         self.chromo_num = chromo_num
         self.max_idx = 0
         self.g_map = g_map
         self.new_chromo_num = new_chromo_num
-        self.punish_increase = punish_increase
         for i in range(0, len(self.chromo_list)):
             self.max_idx += 1
             self.chromo_list[i].idx = i
@@ -28,31 +30,34 @@ class Nature:
 
     def operate(self):
         self.__random_add__(self.new_chromo_num)
-        new_punish = self.chromo_list[0].punish * self.punish_increase
-        for chromo in self.chromo_list:
-            chromo.set_punish_para(punish=new_punish)
-            chromo.refresh_state()
         self.__ranking__()
-        print('Ranking OK.')
+        print('Ranking OK.', end='\t')
         bad_chromo_list = []
         for chromo in self.chromo_list[int(self.reserve * len(self.chromo_list)):]:
             if random.random() < self.bad_reserve_p:
                 bad_chromo_list.append(chromo)
         self.chromo_list = self.chromo_list[:int(self.reserve * len(self.chromo_list))]
         self.chromo_list.extend(bad_chromo_list)
-        print('Select OK.')
-        chromo_copy1 = self.chromo_list.copy()
+        old_chromo_list = copy.deepcopy(self.chromo_list)
+        print('Select OK.', end='\t')
+        chromo_copy1 = copy.deepcopy(self.chromo_list)
         chromo_copy2 = self.chromo_list[1:]
         chromo_copy2.append(self.chromo_list[0])
         self.chromo_list[:] = []
         for chromo1, chromo2 in zip(chromo_copy1, chromo_copy2):
-            if random.random() < 0.5:
-                self.__crossover__(chromo1, chromo2)
-        print('Cross OK.')
-        for chromo in self.chromo_list:
+            if random.random() < cross_p:
+                chromo1_cross, chromo2_cross, r = self.__crossover__(chromo1, chromo2)
+                if r == 1:
+                    self.chromo_list.append(chromo1)
+                    self.chromo_list.append(chromo2)
+        print('Cross OK.', end='\t')
+        self.__ranking__()
+        for idx, chromo in enumerate(self.chromo_list):
             chromo.mutate()
-        print('Mutate OK.')
+        self.chromo_list.extend(old_chromo_list)
+        print('Mutate OK.', end='\t')
         self.__random_add__(num=self.chromo_num - len(self.chromo_list))
+        print('New Chromo Add OK.')
 
     def get_best(self):
         """
@@ -60,6 +65,11 @@ class Nature:
         :return: best chromo
         """
         return min(self.chromo_list, key=lambda x: x.cost)
+
+    def set_new_punish(self, new_punish):
+        for chromo in self.chromo_list:
+            chromo.set_punish_para(punish=new_punish)
+            chromo.refresh_state()
 
     def __ranking__(self):
         """
@@ -86,7 +96,7 @@ class Nature:
                     cost_bound = cost
             for chromo in temp_list:
                 cost, vehicle_num = chromo.get_score()
-                if cost < cost_bound or vehicle_num < vehicle_num_bound:
+                if cost <= cost_bound or vehicle_num <= vehicle_num_bound:
                     chromo.rank = rank
                     temp_list.remove(chromo)
         self.chromo_list.sort(key=lambda x: x.rank)'''
@@ -99,14 +109,25 @@ class Nature:
         :param chromo2: the chromo to be crossed
         :return: None
         """
-        route1 = chromo1.sequence[random.randint(0, len(chromo1.sequence) - 1)]
-        route2 = chromo2.sequence[random.randint(0, len(chromo2.sequence) - 1)]
+        sequence1 = []
+        for route in chromo1.sequence:
+            if not route.get_if_punish():
+                sequence1.append(route)
+        sequence2 = []
+        for route in chromo2.sequence:
+            if not route.get_if_punish():
+                sequence2.append(route)
+        if len(sequence1) == 0 or len(sequence2) == 0:
+            return chromo1, chromo2, -1
+        route1 = sequence1[random.randint(0, len(sequence1) - 1)]
+        route2 = sequence2[random.randint(0, len(sequence2) - 1)]
         chromo1.clear(route2)
         chromo2.clear(route1)
         chromo1.sequence.append(route2)
         chromo2.sequence.append(route1)
         chromo1.refresh_state()
         chromo2.refresh_state()
+        return chromo1, chromo2, 1
 
     def __hill_climbing__(self):
         pass
