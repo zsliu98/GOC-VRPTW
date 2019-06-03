@@ -12,6 +12,14 @@ class Nature:
 
     def __init__(self, chromo_list, chromo_num, g_map, new_chromo_num=1,
                  reserve=0.4, bad_reserve_p=0.1):
+        """
+        :param chromo_list: chromo in this nature
+        :param chromo_num: the number of chromo in this nature
+        :param g_map: global map
+        :param new_chromo_num: the number of chromo add to this route each operation
+        :param reserve:
+        :param bad_reserve_p: the probability of reserve bad chromo
+        """
         self.chromo_list = chromo_list
         self.chromo_num = chromo_num
         self.max_idx = 0
@@ -29,6 +37,10 @@ class Nature:
         self.bad_reserve_p = bad_reserve_p
 
     def operate(self):
+        """
+        operate the nature, include rank, select, cross, mutate, new add
+        :return: None
+        """
         self.__random_add__(self.new_chromo_num)
         self.__ranking__()
         print('Ranking OK.', end='\t')

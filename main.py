@@ -8,8 +8,8 @@ from PGA import Nature
 from PGA import Chromo
 from PGA import Route
 
-load = False
-save = True  # warning: if save set to be true, it may save the 'nature' to save_dir, which is up to 20GB
+load = True
+save = True  # warning: if save set to be true, it may save the 'nature' to save_dir, which is up to 100MB
 generation_num = 100
 chromo_num = 120
 _punish = 9999
@@ -30,6 +30,7 @@ def main():
         try:
             nature = pickle_load(save_dir)
         except FileNotFoundError or EOFError:
+            print('No "nature" in given direction. New "nature" will be created.')
             nature = Nature(chromo_list=[], chromo_num=chromo_num, g_map=g_map, new_chromo_num=5)
 
     punish = _punish

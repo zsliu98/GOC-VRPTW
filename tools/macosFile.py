@@ -1,5 +1,6 @@
 import pickle
 
+
 class MacOSFile(object):
 
     def __init__(self, f):
@@ -39,6 +40,6 @@ def pickle_dump(obj, file_path: str):
         return pickle.dump(obj, MacOSFile(f), protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def pickle_load(file_path:str):
+def pickle_load(file_path: str):
     with open(file_path, "rb") as f:
         return pickle.load(MacOSFile(f))

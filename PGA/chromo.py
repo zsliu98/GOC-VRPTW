@@ -31,6 +31,13 @@ class Chromo:
     sequence: List[Route]
 
     def __init__(self, sequence=None, g_map=None, idx=0, punish=9999, reset_window=True):
+        """
+        :param sequence: routes in this chromo, order insensitive
+        :param g_map: global map
+        :param idx: chromo idx, not necessary
+        :param punish: punish parameter
+        :param reset_window: if reset time window when time window punishment occurs
+        """
         self.idx = idx
         self.g_map = g_map
         self.sequence = sequence
@@ -120,6 +127,11 @@ class Chromo:
                 pre_node = node
 
     def set_punish_para(self, punish):
+        """
+        set new punish parameter to current
+        :param punish: new punish parameter
+        :return: None
+        """
         self.punish = punish
         for route in self.sequence:
             route.set_punish_para(punish)
@@ -142,6 +154,10 @@ class Chromo:
                     pass
 
     def mutate(self):
+        """
+        mutate the chromo, include: split, add, delete, combine, reschedule, random
+        :return: None
+        """
         max_s = max(self.sequence, key=lambda x: x.window_punish + x.weight_punish + x.volume_punish)
         max_s_punish = max_s.window_punish + max_s.weight_punish + max_s.volume_punish
         max_a_punish = max(self.sequence, key=lambda x: x.capacity_punish).capacity_punish
@@ -155,6 +171,10 @@ class Chromo:
             self.__random_mutate__()
 
     def has_punish_num(self):
+        """
+        calculate how many routes have punishment
+        :return: number of routes have punishment
+        """
         num = 0
         for route in self.sequence:
             if route.get_if_punish():
@@ -235,18 +255,28 @@ class Chromo:
             del new_route
 
     def __reschedule_mutate__(self):
+        """
+        reschedule a random route
+        :return: None
+        """
         mutate_pos = random.randint(0, len(self.sequence) - 1)
         self.sequence[mutate_pos].reschedule_mutate()
 
     def __random_mutate__(self):
         """
-        add little perturbation to route
+        add little perturbation to a random route
         :return: None
         """
         mutate_pos = random.randint(0, len(self.sequence) - 1)
         self.sequence[mutate_pos].random_mutate()
 
     def __combine__(self, route1: Route, route2: Route):
+        """
+        combine two routes, insert station if needed
+        :param route1: route 1
+        :param route2: route 2
+        :return: route combined from route 1 and route 2
+        """
         if sum(route1.get_mean_time_window()) > sum(route2.get_mean_time_window()):
             route1, route2 = route2, route1
         route_distance = self.g_map.get_distance(route1.sequence[-1], route2.sequence[0])

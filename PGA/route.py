@@ -24,6 +24,12 @@ class Route:
     sequence: List[int]
 
     def __init__(self, sequence, g_map, punish=9999, refresh_im=True):
+        """
+        :param sequence: node in this route, order sensitive
+        :param g_map: global map
+        :param punish: punish parameter
+        :param refresh_im: if refresh state after init immediately
+        """
         self.sequence = sequence
         self.g_map = g_map
         self.punish = punish
@@ -38,7 +44,8 @@ class Route:
 
     def refresh_state(self, reset_window=True):
         """
-        refresh state of this route
+        refresh state of this route, i.e. recalculate all punish, cost and other parameters
+        if the sequence and punish parameter of this route hasn't been changed, this method shouldn't be called
         :param reset_window: if time window is reset to the last serve time after time window punish
         :return: None
         """
@@ -118,6 +125,11 @@ class Route:
         return (max_weight - self.served_w) / max_weight
 
     def get_mean_time_window(self):
+        """
+        get mean time window, i.e. mean value of first time and last time
+        may be used to compare this route with the other
+        :return: mean value of first time, mean value of last time
+        """
         first_tm = []
         last_tm = []
         for node in self.sequence:
@@ -131,12 +143,21 @@ class Route:
         return self.volume_punish > 0 or self.weight_punish > 0 or self.window_punish > 0 or self.capacity_punish > 0
 
     def has_customer(self):
+        """
+        get if this route has any customer (if none, this route absolutely needs to be removed)
+        :return: whether this route has any customer
+        """
         for node in self.sequence:
             if node <= custom_number:
                 return True
         return False
 
     def split_mutate(self, p=0.618):
+        """
+        split this route into two routes
+        :param p: the probability of put node into first route
+        :return: route 1 and route 2 from this route
+        """
         sequence1 = []
         sequence2 = []
         for node in self.sequence:
@@ -154,11 +175,19 @@ class Route:
             return route1, route2
 
     def add_mutate(self):
+        """
+        add a station to this route, between [len / 4, len * 3 / 4]
+        :return: None
+        """
         add_pos = random.randint(int(len(self.sequence) / 4), int(len(self.sequence) * 3 / 4))
         station = self.g_map.get_nearby_station(self.sequence[add_pos - 1])
         self.sequence.insert(add_pos, station)
 
     def delete_mutate(self):
+        """
+        delete a station in this route
+        :return: None
+        """
         temp_sequence = np.array(self.sequence)
         temp_sequence = temp_sequence[temp_sequence > custom_number]
         if len(temp_sequence) == 0:
@@ -168,6 +197,10 @@ class Route:
         del temp_sequence
 
     def reschedule_mutate(self):
+        """
+        reschedule the route, i.e. each time add the nearest node from pre node
+        :return: None
+        """
         temp_sequence = self.sequence.copy()
         copy_sequence = self.sequence.copy()
         copy_cost = self.cost
@@ -184,11 +217,10 @@ class Route:
             self.refresh_state()
 
     def random_mutate(self):
+        """
+        randomly swap two node in thie route
+        :return: None
+        """
         pos1 = random.randint(0, len(self.sequence) - 1)
         pos2 = random.randint(0, len(self.sequence) - 1)
-        if pos1 == pos2:
-            return
-        if pos1 > pos2:
-            pos1, pos2 = pos2, pos1
-        self.sequence = self.sequence[:pos1] + [self.sequence[pos2]] + self.sequence[pos1 + 1:pos2] \
-                        + [self.sequence[pos1]] + self.sequence[pos2 + 1:]
+        self.sequence[pos1], self.sequence[pos2] = self.sequence[pos2], self.sequence[pos1]
