@@ -218,7 +218,7 @@ class Chromo:
         if max_punish == 0:
             return
         for route in self.sequence:
-            add_p = (math.exp(route.capacity_punish / max_punish) - 1) / (math.e - 1)
+            add_p = (math.exp((route.capacity_punish / max_punish)) - 1) / (math.e - 1)
             if random.random() < add_p:
                 route.add_mutate()
 
@@ -251,7 +251,6 @@ class Chromo:
         self.sequence.remove(route2)
         if route1.served_v + route2.served_v < max_volume and route1.served_w + route2.served_w < max_weight:
             self.sequence.append(self.__combine__(route1, route2))
-            self.sequence[-1].refresh_state()
         else:
             new_route = self.__combine__(route1, route2)
             new_routes = new_route.split_mutate()
@@ -293,7 +292,7 @@ class Chromo:
         else:
             new_station = self.g_map.get_nearby_station(route1.sequence[-1])
             new_sequence = route1.sequence + [new_station] + route2.sequence
-        return Route(sequence=new_sequence, g_map=self.g_map, punish=self.punish, refresh_im=False)
+        return Route(sequence=new_sequence, g_map=self.g_map, punish=self.punish)
 
     def deepcopy(self):
         r_sequence = []

@@ -84,7 +84,7 @@ class GlobalMap:
         """
         for i in range(0, 1001):
             temp_station_d = self.distance_table['distance'][self.__get_index__(i, 1001):self.__get_index__(i, 1100)]
-            self.nearby_station_list.append(np.argmax(np.array(temp_station_d)) + 1001)
+            self.nearby_station_list.append(np.argmin(np.array(temp_station_d)) + 1001)
         for i in range(1001, 1101):
             min_d = 99999999
             min_pos = 0

@@ -44,7 +44,6 @@ class Nature:
         """
         self.__ranking__()
         print('Ranking OK.', end='\t')
-        print(self.get_best().cost, end='\t')
         self.chromo_list = self.chromo_list[:self.chromo_num]
         bad_chromo_list = []
         for chromo in self.chromo_list[int(self.reserve * len(self.chromo_list)):]:
@@ -82,7 +81,7 @@ class Nature:
         self.__random_add__(num=add_num)
         print('New Chromo Add OK {}.'.format(max(add_num, 0)), end='\t')
         self.__experience_apply__()
-        print('Experience Apply OK.')
+        print('Experience Apply OK.', end='\t')
         self.__ranking__()
         print('Total {} Chromo.'.format(len(self.chromo_list)))
 

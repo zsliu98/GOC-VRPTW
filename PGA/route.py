@@ -181,7 +181,16 @@ class Route:
         """
         for i in range(0, 5):
             add_pos = random.randint(0, len(self.sequence))
-            station = self.g_map.get_nearby_station(self.sequence[add_pos - 1])
+            if random.random() < 0.5:
+                if add_pos != len(self.sequence):
+                    station = self.g_map.get_nearby_station(self.sequence[add_pos])
+                else:
+                    station = self.g_map.get_nearby_station(self.sequence[center_id])
+            else:
+                if add_pos != 0:
+                    station = self.g_map.get_nearby_station(self.sequence[add_pos - 1])
+                else:
+                    station = self.g_map.get_nearby_station(self.sequence[center_id])
             old_sequence = self.sequence.copy()
             old_capacity_punish = self.capacity_punish
             self.sequence.insert(add_pos, station)
@@ -191,6 +200,7 @@ class Route:
             else:
                 self.sequence = old_sequence.copy()
                 del old_sequence
+        self.refresh_state()
 
     def delete_mutate(self):
         """
@@ -208,6 +218,7 @@ class Route:
         self.refresh_state()
         if self.cost > old_cost:
             self.sequence = old_sequence.copy()
+            self.refresh_state()
         del old_sequence
         del temp_sequence
 

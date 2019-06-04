@@ -12,6 +12,14 @@ save_dir = 'data/nature.pkl'
 
 nature: Nature = pickle_load(save_dir)
 
+g_map = GlobalMap()
+
+print(g_map.get_distance(1010, 192))
+print(g_map.get_nearby_station(192))
+print(g_map.get_distance(1046, 192))
+
+print(nature.punish)
+
 best: Chromo = nature.get_best()
 
 print(best.cost)
@@ -33,6 +41,8 @@ for route in best.sequence:
 
 best.refresh_state()
 
+print(best.punish)
+
 print(best.cost)
 
 print(best.has_punish_num())
@@ -40,6 +50,6 @@ print(best.has_punish_num())
 print(best.vehicle_number)
 print(best.cost - best.punish * (best.has_punish_num()[3] + best.has_punish_num()[4]))
 
-for route in best.sequence:
-    if route.window_punish != 0:
-        print(route.start_time, route.sequence, route.capacity_punish, route.window_punish)
+for i in range(0, 30):
+    best.mutate()
+    print(best.cost)

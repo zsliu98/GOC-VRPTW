@@ -10,7 +10,7 @@ from PGA import Route
 load = True
 save = True  # warning: if save set to be true, it may save the 'nature' to save_dir, which is up to 100MB
 generation_num = 500
-chromo_num = 50
+chromo_num = 60
 _punish = 99999
 save_dir = 'data/nature.pkl'
 
@@ -30,7 +30,7 @@ def main():
             nature = pickle_load(save_dir)
         except FileNotFoundError:
             print('No "nature" in given direction. New "nature" will be created.')
-            nature = Nature(chromo_list=[], chromo_num=chromo_num, g_map=g_map, new_chromo_num=5)
+            nature = Nature(chromo_list=[], chromo_num=chromo_num, g_map=g_map, new_chromo_num=5, punish=_punish)
 
     for generation in range(0, generation_num):
         print('Generation {} start.'.format(generation))
