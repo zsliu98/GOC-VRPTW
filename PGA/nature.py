@@ -4,14 +4,14 @@ import copy
 
 from PGA.chromo import Chromo
 
-cross_p = 0.2
+cross_p = 0.8
 
 
 class Nature:
     chromo_list: List[Chromo]
 
-    def __init__(self, chromo_list, chromo_num, g_map, new_chromo_num=1,
-                 reserve=0.4, bad_reserve_p=0.1):
+    def __init__(self, chromo_list, chromo_num, g_map, new_chromo_num=10,
+                 reserve=0.4, bad_reserve_p=0.1, punish=9999):
         """
         :param chromo_list: chromo in this nature
         :param chromo_num: the number of chromo in this nature
@@ -25,6 +25,7 @@ class Nature:
         self.max_idx = 0
         self.g_map = g_map
         self.new_chromo_num = new_chromo_num
+        self.punish = punish
         for i in range(0, len(self.chromo_list)):
             self.max_idx += 1
             self.chromo_list[i].idx = i
@@ -41,28 +42,33 @@ class Nature:
         operate the nature, include rank, select, cross, mutate, new add
         :return: None
         """
-        self.__random_add__(self.new_chromo_num)
         self.__ranking__()
         print('Ranking OK.', end='\t')
+        print(self.get_best().cost, end='\t')
+        self.chromo_list = self.chromo_list[:self.chromo_num]
         bad_chromo_list = []
         for chromo in self.chromo_list[int(self.reserve * len(self.chromo_list)):]:
             if random.random() < self.bad_reserve_p:
                 bad_chromo_list.append(chromo)
         self.chromo_list = self.chromo_list[:int(self.reserve * len(self.chromo_list))]
         self.chromo_list.extend(bad_chromo_list)
-        old_chromo_list = self.chromo_list.copy()
-        print('Select OK.', end='\t')
-        chromo_copy1 = self.chromo_list.copy()
-        chromo_copy2 = self.chromo_list[1:]
-        chromo_copy2.append(self.chromo_list[0])
-        self.chromo_list[:] = []
+        self.__random_add__(self.new_chromo_num)
+        old_chromo_list = []
+        for chromo in self.chromo_list:
+            old_chromo_list.append(chromo.deepcopy())
+        print('Select OK {}.'.format(len(self.chromo_list)), end='\t')
+        chromo_copy1 = self.chromo_list[::2]
+        chromo_copy2 = self.chromo_list[1::2]
+        random.shuffle(chromo_copy2)
+        if len(chromo_copy2) < len(chromo_copy1):
+            chromo_copy1.pop()
         for chromo1, chromo2 in zip(chromo_copy1, chromo_copy2):
             if random.random() < cross_p:
                 chromo1_cross, chromo2_cross, r = self.__crossover__(chromo1, chromo2)
                 if r == 1:
                     self.chromo_list.append(chromo1)
                     self.chromo_list.append(chromo2)
-        print('Cross OK{}.'.format(len(self.chromo_list)), end='\t')
+        print('Cross OK {}.'.format(len(self.chromo_list)), end='\t')
         del chromo_copy1
         del chromo_copy2
         self.__ranking__()
@@ -71,8 +77,11 @@ class Nature:
         self.chromo_list.extend(old_chromo_list)
         del old_chromo_list
         print('Mutate OK.', end='\t')
-        self.__random_add__(num=self.chromo_num - len(self.chromo_list))
-        print('New Chromo Add OK.')
+        add_num = self.chromo_num - len(self.chromo_list)
+        self.__random_add__(num=add_num)
+        print('New Chromo Add OK {}.'.format(max(add_num, 0)), end='\t')
+        self.__ranking__()
+        print('Total {} Chromo.'.format(len(self.chromo_list)))
 
     def get_best(self):
         """
@@ -82,9 +91,9 @@ class Nature:
         return min(self.chromo_list, key=lambda x: x.cost)
 
     def set_new_punish(self, new_punish):
+        self.punish = new_punish
         for chromo in self.chromo_list:
             chromo.set_punish_para(punish=new_punish)
-            chromo.refresh_state()
 
     def __ranking__(self):
         """
@@ -136,8 +145,8 @@ class Nature:
                 sequence2.append(route)
         if len(sequence1) == 0 or len(sequence2) == 0:
             return chromo1, chromo2, -1
-        route1 = sequence1[random.randint(0, len(sequence1) - 1)]
-        route2 = sequence2[random.randint(0, len(sequence2) - 1)]
+        route1 = sequence1[random.randint(0, len(sequence1) - 1)].deep_copy()
+        route2 = sequence2[random.randint(0, len(sequence2) - 1)].deep_copy()
         chromo1 = chromo1.deepcopy()
         chromo2 = chromo2.deepcopy()
         chromo1.clear(route2)
@@ -153,5 +162,5 @@ class Nature:
 
     def __random_add__(self, num: int):
         for i in range(0, num):
-            self.chromo_list.append(Chromo(sequence=None, g_map=self.g_map, idx=self.max_idx))
+            self.chromo_list.append(Chromo(sequence=None, g_map=self.g_map, idx=self.max_idx, punish=self.punish))
             self.max_idx += 1

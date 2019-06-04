@@ -193,7 +193,13 @@ class Route:
         if len(temp_sequence) == 0:
             return
         delete_pos = random.randint(0, len(temp_sequence) - 1)
+        old_sequence = self.sequence.copy()
+        old_cost = self.cost
         self.sequence.remove(int(temp_sequence[delete_pos]))
+        self.refresh_state()
+        if self.cost > old_cost:
+            self.sequence = old_sequence.copy()
+        del old_sequence
         del temp_sequence
 
     def reschedule_mutate(self):
@@ -224,3 +230,6 @@ class Route:
         pos1 = random.randint(0, len(self.sequence) - 1)
         pos2 = random.randint(0, len(self.sequence) - 1)
         self.sequence[pos1], self.sequence[pos2] = self.sequence[pos2], self.sequence[pos1]
+
+    def deep_copy(self):
+        return Route(sequence=self.sequence.copy(), g_map=self.g_map, punish=self.punish)

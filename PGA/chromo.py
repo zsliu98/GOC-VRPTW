@@ -136,13 +136,13 @@ class Chromo:
         for route in self.sequence:
             route.set_punish_para(punish)
 
-    def clear(self, route: Route):
+    def clear(self, c_route: Route):
         """
         clear all node in the given route to prepare for the route insert
-        :param route: the route going to be inserted
+        :param c_route: the route going to be inserted
         :return: None
         """
-        clear_list = route.sequence
+        clear_list = c_route.sequence
         for node in clear_list:
             if node > custom_number:
                 continue
@@ -176,10 +176,18 @@ class Chromo:
         :return: number of routes have punishment
         """
         num = 0
+        window_punish = 0
+        volume_punish = 0
+        weight_punish = 0
+        capacity_punish = 0
         for route in self.sequence:
             if route.get_if_punish():
                 num += 1
-        return num
+                window_punish += route.window_punish
+                volume_punish += route.volume_punish
+                weight_punish += route.weight_punish
+                capacity_punish += route.capacity_punish
+        return num, weight_punish / self.punish, volume_punish / self.punish, window_punish / self.punish, capacity_punish / self.punish
 
     def __split_mutate__(self, max_punish):
         """
