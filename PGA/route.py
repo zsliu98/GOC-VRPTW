@@ -101,7 +101,7 @@ class Route:
         self.capacity_remain = capacity
         time += t
         self.cost += unit_trans_cost * d  # regular cost
-        self.capacity_punish += self.punish * abs(capacity) if capacity < 0 else 0
+        self.capacity_punish += self.punish * abs(capacity) / driving_range if capacity < 0 else 0
         if time > 24.:
             self.window_punish += self.punish * abs(time - 24.)
             extra_time.append(-1)
@@ -176,12 +176,21 @@ class Route:
 
     def add_mutate(self):
         """
-        add a station to this route, between [len / 4, len * 3 / 4]
+        add a station to this route, between [0, len], i.e. everywhere is possible
         :return: None
         """
-        add_pos = random.randint(int(len(self.sequence) / 4), int(len(self.sequence) * 3 / 4))
-        station = self.g_map.get_nearby_station(self.sequence[add_pos - 1])
-        self.sequence.insert(add_pos, station)
+        for i in range(0, 5):
+            add_pos = random.randint(0, len(self.sequence))
+            station = self.g_map.get_nearby_station(self.sequence[add_pos - 1])
+            old_sequence = self.sequence.copy()
+            old_capacity_punish = self.capacity_punish
+            self.sequence.insert(add_pos, station)
+            self.refresh_state()
+            if self.capacity_punish < old_capacity_punish:
+                break
+            else:
+                self.sequence = old_sequence.copy()
+                del old_sequence
 
     def delete_mutate(self):
         """

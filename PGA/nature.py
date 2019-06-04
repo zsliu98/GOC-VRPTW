@@ -71,7 +71,8 @@ class Nature:
         print('Cross OK {}.'.format(len(self.chromo_list)), end='\t')
         del chromo_copy1
         del chromo_copy2
-        self.__ranking__()
+        for chromo in old_chromo_list:
+            self.chromo_list.append(chromo.deepcopy())
         for idx, chromo in enumerate(self.chromo_list):
             chromo.mutate()
         self.chromo_list.extend(old_chromo_list)
@@ -80,6 +81,8 @@ class Nature:
         add_num = self.chromo_num - len(self.chromo_list)
         self.__random_add__(num=add_num)
         print('New Chromo Add OK {}.'.format(max(add_num, 0)), end='\t')
+        self.__experience_apply__()
+        print('Experience Apply OK.')
         self.__ranking__()
         print('Total {} Chromo.'.format(len(self.chromo_list)))
 
@@ -159,6 +162,18 @@ class Nature:
 
     def __hill_climbing__(self):
         pass
+
+    def __experience_apply__(self):
+        for chromo in self.chromo_list:
+            for route in chromo.sequence:
+                idx = 0
+                while True:
+                    if idx >= len(route.sequence) - 1:
+                        break
+                    if route.sequence[idx] == route.sequence[idx + 1]:
+                        route.sequence.pop(idx)
+                        idx -= 1
+                    idx += 1
 
     def __random_add__(self, num: int):
         for i in range(0, num):
