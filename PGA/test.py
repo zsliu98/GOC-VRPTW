@@ -3,6 +3,8 @@ from PGA import Nature
 from PGA import Chromo
 from PGA import Route
 
+import numpy as np
+
 load = True
 save = True  # warning: if save set to be true, it may save the 'nature' to save_dir, which is up to 100MB
 generation_num = 500
@@ -10,46 +12,24 @@ chromo_num = 50
 _punish = 99999
 save_dir = 'data/nature.pkl'
 
-nature: Nature = pickle_load(save_dir)
+# nature: Nature = pickle_load(save_dir)
 
 g_map = GlobalMap()
 
-print(g_map.get_distance(1010, 192))
-print(g_map.get_nearby_station(192))
-print(g_map.get_distance(1046, 192))
+chromo1 = Chromo(sequence=None, g_map=g_map)
+chromo2 = chromo1.deepcopy()
 
-print(nature.punish)
+print(chromo1.get_custom_num())
+print(chromo2.get_custom_num())
 
-best: Chromo = nature.get_best()
+print(chromo1.get_custom_num())
+print(chromo2.get_custom_num())
 
-print(best.cost)
+nature = Nature(g_map=g_map, chromo_list=[chromo1, chromo2], chromo_num=2)
 
-print(best.has_punish_num())
-print(best.vehicle_number)
-print(best.cost - best.punish * (best.has_punish_num()[3] + best.has_punish_num()[4]))
-
-for route in best.sequence:
-    idx = 0
-    while True:
-        if idx >= len(route.sequence) - 1:
-            break
-        if route.sequence[idx] == route.sequence[idx + 1] \
-                or (route.sequence[idx] >= 1000 and route.sequence[idx + 1] >= 1000):
-            route.sequence.pop(idx)
-            idx -= 1
-        idx += 1
-
-best.refresh_state()
-
-print(best.punish)
-
-print(best.cost)
-
-print(best.has_punish_num())
-
-print(best.vehicle_number)
-print(best.cost - best.punish * (best.has_punish_num()[3] + best.has_punish_num()[4]))
-
-for i in range(0, 30):
-    best.mutate()
-    print(best.cost)
+chromo3, chromo4, r = nature.__crossover__(chromo1, chromo2)
+chromo1.sequence.pop()
+print(chromo1.get_custom_num())
+print(chromo2.get_custom_num())
+print(chromo3.get_custom_num())
+print(chromo4.get_custom_num())

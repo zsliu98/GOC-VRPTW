@@ -1,6 +1,6 @@
 from typing import List
 import random
-import copy
+import numpy as np
 
 from PGA.chromo import Chromo
 
@@ -82,7 +82,6 @@ class Nature:
         print('New Chromo Add OK {}.'.format(max(add_num, 0)), end='\t')
         self.__experience_apply__()
         print('Experience Apply OK.', end='\t')
-        self.__ranking__()
         print('Total {} Chromo.'.format(len(self.chromo_list)))
 
     def get_best(self):
@@ -137,6 +136,8 @@ class Nature:
         :param chromo2: the chromo to be crossed
         :return: None
         """
+        chromo1 = chromo1.deepcopy()
+        chromo2 = chromo2.deepcopy()
         sequence1 = []
         for route in chromo1.sequence:
             if not route.get_if_punish():
@@ -147,10 +148,11 @@ class Nature:
                 sequence2.append(route)
         if len(sequence1) == 0 or len(sequence2) == 0:
             return chromo1, chromo2, -1
-        route1 = sequence1[random.randint(0, len(sequence1) - 1)].deep_copy()
-        route2 = sequence2[random.randint(0, len(sequence2) - 1)].deep_copy()
-        chromo1 = chromo1.deepcopy()
-        chromo2 = chromo2.deepcopy()
+        random_weight = random.random()
+        route1 = max(sequence1, key=lambda x: random_weight * x.served_w + (1 - random_weight) * x.served_v).deepcopy()
+        route2 = max(sequence2, key=lambda x: random_weight * x.served_w + (1 - random_weight) * x.served_v).deepcopy()
+        # route1 = sequence1[random.randint(0, len(sequence1) - 1)].deepcopy()
+        # route2 = sequence2[random.randint(0, len(sequence2) - 1)].deepcopy()
         chromo1.clear(route2)
         chromo2.clear(route1)
         chromo1.sequence.append(route2)
@@ -164,15 +166,14 @@ class Nature:
 
     def __experience_apply__(self):
         for chromo in self.chromo_list:
-            for route in chromo.sequence:
-                idx = 0
-                while True:
-                    if idx >= len(route.sequence) - 1:
-                        break
-                    if route.sequence[idx] == route.sequence[idx + 1]:
-                        route.sequence.pop(idx)
-                        idx -= 1
-                    idx += 1
+            chromo.remove_duplicate()
+        self.__ranking__()
+        idx = 0
+        while idx < len(self.chromo_list) - 1:
+            if self.chromo_list[idx].is_equal(self.chromo_list[idx + 1]):
+                self.chromo_list.pop(idx)
+                idx -= 1
+            idx += 1
 
     def __random_add__(self, num: int):
         for i in range(0, num):

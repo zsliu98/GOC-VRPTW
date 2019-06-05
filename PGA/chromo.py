@@ -1,29 +1,31 @@
 from typing import List
+import numpy as np
 import random
 import math
 
 from tools import GlobalMap
 from PGA.route import Route
+import PGA.constant as const
 
-random_mutate_p = 0.1
+random_mutate_p = const.random_mutate_p
 
-center_id = 0
-custom_number = 1000
-station_number = 100
-random_add_station = 2
+center_id = const.center_id
+custom_number = const.custom_number
+station_number = const.station_number
 
-max_volume = 16
-max_weight = 2.5
-starve_para = 0.25
-unload_time = 0.5
-driving_range = 120000
-charge_tm = 0.5
-charge_cost = 50
-wait_cost = 24
-depot_wait = 1
-depot_open_time = 16.
-unit_trans_cost = 14. / 1000
-vehicle_cost = 300
+max_volume = const.max_volume
+max_weight = const.max_weight
+starve_para = const.starve_para
+unload_time = const.unload_time
+driving_range = const.driving_range
+charge_tm = const.charge_tm
+charge_cost = const.charge_cost
+wait_cost = const.wait_cost
+depot_wait = const.depot_wait
+depot_open_time = const.depot_open_time
+unit_trans_cost = const.unit_trans_cost
+vehicle_cost = const.vehicle_cost
+combine_try_time = const.combine_try_time
 
 
 class Chromo:
@@ -58,7 +60,7 @@ class Chromo:
         """
         self.cost = 0
         self.vehicle_number = len(self.sequence)
-        start_list = [depot_open_time]
+        start_list = []
         for route in self.sequence:
             route.refresh_state()
             self.cost += route.cost  # pure route cost
@@ -98,6 +100,7 @@ class Chromo:
         weight, volume = max_weight, max_volume
         temp_route = []
         pre_node = center_id
+        append_time = 0
         for idx, node in enumerate(temp_node):
             capacity -= self.g_map.get_distance(pre_node, node)
             demand = self.g_map.get_demand(node)
@@ -111,20 +114,22 @@ class Chromo:
                 if self.g_map.get_distance(pre_node, next_station) > capacity:
                     insert_station_p = 0
                 if random.random() < insert_station_p:
-                    temp_route.append(self.g_map.get_nearby_station(node))
+                    temp_route.append(next_station)
                     temp_route.append(node)
-                    capacity += self.g_map.get_distance(pre_node, node)
+                    capacity = driving_range
                     capacity -= self.g_map.get_distance(next_station, node)
                     pre_node = node
                 else:
-                    self.sequence.append(Route(sequence=temp_route, g_map=self.g_map, punish=self.punish))
+                    temp_route.append(node)
+                    self.sequence.append(Route(sequence=temp_route.copy(), g_map=self.g_map, punish=self.punish))
                     capacity = driving_range
                     weight, volume = max_weight, max_volume
-                    temp_route = []
+                    temp_route[:] = []
                     pre_node = center_id
             else:
                 temp_route.append(node)
                 pre_node = node
+        self.sequence.append(Route(sequence=temp_route.copy(), g_map=self.g_map, punish=self.punish))
 
     def set_punish_para(self, punish):
         """
@@ -160,15 +165,16 @@ class Chromo:
         """
         max_s = max(self.sequence, key=lambda x: x.window_punish + x.weight_punish + x.volume_punish)
         max_s_punish = max_s.window_punish + max_s.weight_punish + max_s.volume_punish
-        max_a_punish = max(self.sequence, key=lambda x: x.capacity_punish).capacity_punish
-        max_d_remain = max(self.sequence, key=lambda x: x.capacity_remain).capacity_remain
         self.__split_mutate__(max_s_punish)
-        self.__add_mutate__(max_a_punish)
-        self.__delete_mutate__(max_d_remain)
+        max_a_punish = max(self.sequence, key=lambda x: x.capacity_punish).capacity_punish
+        self.__add_station_mutate__(max_a_punish)
+        max_d_remain = max(self.sequence, key=lambda x: x.capacity_remain).capacity_remain
+        self.__delete_station_mutate__(max_d_remain)
         self.__combine_mutate__()
+        self.__insert_mutate__()
         self.__reschedule_mutate__()
         if random.random() < random_mutate_p:
-            self.__random_mutate__()
+            self.__random_reverse_mutate__()
 
     def has_punish_num(self):
         """
@@ -208,7 +214,7 @@ class Chromo:
                 del route
                 self.sequence.extend(new_routes)
 
-    def __add_mutate__(self, max_punish):
+    def __add_station_mutate__(self, max_punish):
         """
         if capacity punish exists, randomly add a charging station into the route
         if no capacity punish exists, nothing will be done
@@ -222,7 +228,7 @@ class Chromo:
             if random.random() < add_p:
                 route.add_mutate()
 
-    def __delete_mutate__(self, max_remain):
+    def __delete_station_mutate__(self, max_remain):
         """
         if too much capacity remain, randomly delete a charging station (if exists)
         :param max_remain: max capacity remain, use for normalization
@@ -234,32 +240,47 @@ class Chromo:
         if max_remain < 0.1 * driving_range:
             return
         for route in self.sequence:
-            add_p = (math.exp(route.capacity_remain / max_remain) - 1) / (math.e - 1)
-            if random.random() < add_p:
-                route.delete_mutate()
+            delete_p = (math.exp(route.capacity_remain / max_remain) - 1) / (math.e - 1)
             if not route.has_customer():
                 self.sequence.remove(route)
+            if random.random() < delete_p:
+                route.delete_mutate()
 
     def __combine_mutate__(self):
         """
         if too much cargo not be delivered in route (i.e. too few customers are served), combine two
         :return: None
         """
-        route1 = min(self.sequence, key=lambda x: x.served_w)
-        self.sequence.remove(route1)
-        route2 = min(self.sequence, key=lambda x: x.served_v)
-        self.sequence.remove(route2)
-        if route1.served_v + route2.served_v < max_volume and route1.served_w + route2.served_w < max_weight:
-            self.sequence.append(self.__combine__(route1, route2))
-        else:
-            new_route = self.__combine__(route1, route2)
-            new_routes = new_route.split_mutate()
-            if (len(new_routes) == 1 and new_routes[0].cost + vehicle_cost < route1.cost + route2.cost) \
-                    or (len(new_routes) == 2 and new_routes[0].cost + new_routes[1].cost < route1.cost + route2.cost):
-                self.sequence.extend(new_route.split_mutate())
-                self.sequence[-1].refresh_state()
-                self.sequence[-2].refresh_state()
-            del new_route
+        self.sequence.sort(key=lambda x: x.served_w)
+        route_list1 = self.sequence[:combine_try_time]
+        random.shuffle(route_list1)
+        self.sequence.sort(key=lambda x: x.served_v)
+        route_list2 = self.sequence[:combine_try_time]
+        random.shuffle(route_list2)
+        for route1, route2 in zip(route_list1, route_list2):
+            if route1.is_equal(route2) or \
+                    (route1.served_v + route2.served_v > max_volume or route1.served_w + route2.served_w > max_weight):
+                continue
+            if route1 in self.sequence and route2 in self.sequence:
+                self.sequence.remove(route1)
+                self.sequence.remove(route2)
+                if route1.served_v + route2.served_v < max_volume and route1.served_w + route2.served_w < max_weight:
+                    self.sequence.append(self.__combine__(route1, route2))
+                else:
+                    new_route = self.__combine__(route1, route2)
+                    new_routes = new_route.split_mutate()
+                    if (len(new_routes) == 1 and new_routes[0].cost + vehicle_cost < route1.cost + route2.cost) \
+                            or (len(new_routes) == 2 and new_routes[0].cost + new_routes[1].cost < route1.cost + route2.cost):
+                        self.sequence.extend(new_route.split_mutate())
+                        self.sequence[-1].refresh_state()
+                        self.sequence[-2].refresh_state()
+                    else:
+                        self.sequence.append(route1)
+                        self.sequence.append(route2)
+                    del new_route
+
+    def __insert_mutate__(self):
+        pass
 
     def __reschedule_mutate__(self):
         """
@@ -269,7 +290,7 @@ class Chromo:
         mutate_pos = random.randint(0, len(self.sequence) - 1)
         self.sequence[mutate_pos].reschedule_mutate()
 
-    def __random_mutate__(self):
+    def __random_reverse_mutate__(self):
         """
         add little perturbation to a random route
         :return: None
@@ -291,12 +312,42 @@ class Chromo:
             new_sequence = route1.sequence + route2.sequence
         else:
             new_station = self.g_map.get_nearby_station(route1.sequence[-1])
-            new_sequence = route1.sequence + [new_station] + route2.sequence
+            new_sequence = route1.sequence.copy() + [new_station] + route2.sequence.copy()
         return Route(sequence=new_sequence, g_map=self.g_map, punish=self.punish)
 
     def deepcopy(self):
         r_sequence = []
         for route in self.sequence:
-            n_sequence = route.sequence.copy()
-            r_sequence.append(Route(sequence=n_sequence, g_map=self.g_map, punish=self.punish))
+            r_sequence.append(route.deepcopy())
         return Chromo(sequence=r_sequence, g_map=self.g_map, punish=self.punish)
+
+    def remove_duplicate(self):
+        for route in self.sequence:
+            if not route.has_customer():
+                self.sequence.remove(route)
+                continue
+            idx = 0
+            while True:
+                if idx >= len(route.sequence) - 1:
+                    break
+                if route.sequence[idx] == route.sequence[idx + 1]:
+                    route.sequence.pop(idx)
+                    idx -= 1
+                idx += 1
+
+    def is_equal(self, chromo):
+        if len(self.sequence) != len(chromo.sequence) or self.cost != chromo.cost:
+            return False
+        for route1, route2 in zip(self.sequence, chromo.sequence):
+            if not route1.is_equal(route2):
+                return False
+        return True
+
+    def get_custom_num(self):
+        _sum = 0
+        for route in self.sequence:
+            temp = np.array(route.sequence)
+            temp = temp[temp <= 1000]
+            _sum += len(temp)
+        return _sum
+

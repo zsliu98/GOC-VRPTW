@@ -3,20 +3,21 @@ import random
 import numpy as np
 
 from tools import GlobalMap
+import PGA.constant as const
 
-center_id = 0
-custom_number = 1000
-station_number = 100
+center_id = const.center_id
+custom_number = const.custom_number
+station_number = const.station_number
 
-max_volume = 16
-max_weight = 2.5
-unload_time = 0.5
-driving_range = 120000
-charge_tm = 0.5
-charge_cost = 50
-wait_cost = 24
-depot_open_time = 8.
-unit_trans_cost = 14. / 1000
+max_volume = const.max_volume
+max_weight = const.max_weight
+unload_time = const.unload_time
+driving_range = const.driving_range
+charge_tm = const.charge_tm
+charge_cost = const.wait_cost
+wait_cost = const.wait_cost
+depot_open_time = const.depot_open_time
+unit_trans_cost = const.unit_trans_cost
 
 
 class Route:
@@ -251,5 +252,13 @@ class Route:
         pos2 = random.randint(0, len(self.sequence) - 1)
         self.sequence[pos1], self.sequence[pos2] = self.sequence[pos2], self.sequence[pos1]
 
-    def deep_copy(self):
+    def deepcopy(self):
         return Route(sequence=self.sequence.copy(), g_map=self.g_map, punish=self.punish)
+
+    def is_equal(self, route):
+        if len(self.sequence) != len(route.sequence) or self.cost != route.cost:
+            return False
+        for node1, node2 in zip(self.sequence, route.sequence):
+            if node1 != node2:
+                return False
+        return True
