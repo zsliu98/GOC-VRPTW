@@ -25,7 +25,10 @@ depot_wait = const.depot_wait
 depot_open_time = const.depot_open_time
 unit_trans_cost = const.unit_trans_cost
 vehicle_cost = const.vehicle_cost
+
 combine_try_time = const.combine_try_time
+insert_try_time = const.insert_try_time
+huge = const.huge
 
 
 class Chromo:
@@ -171,7 +174,6 @@ class Chromo:
         max_d_remain = max(self.sequence, key=lambda x: x.capacity_remain).capacity_remain
         self.__delete_station_mutate__(max_d_remain)
         self.__combine_mutate__()
-        self.__insert_mutate__()
         self.__reschedule_mutate__()
         if random.random() < random_mutate_p:
             self.__random_reverse_mutate__()
@@ -209,6 +211,7 @@ class Chromo:
             split_p = (math.exp((route.window_punish + route.weight_punish + route.volume_punish) / max_punish) - 1) / (
                     math.e - 1)
             if random.random() < split_p:
+                # self.sequence.extend(self.feasible_generate(route.sequence))
                 new_routes = route.split_mutate()
                 self.sequence.remove(route)
                 del route
@@ -270,7 +273,8 @@ class Chromo:
                     new_route = self.__combine__(route1, route2)
                     new_routes = new_route.split_mutate()
                     if (len(new_routes) == 1 and new_routes[0].cost + vehicle_cost < route1.cost + route2.cost) \
-                            or (len(new_routes) == 2 and new_routes[0].cost + new_routes[1].cost < route1.cost + route2.cost):
+                            or (len(new_routes) == 2 and new_routes[0].cost + new_routes[
+                        1].cost < route1.cost + route2.cost):
                         self.sequence.extend(new_route.split_mutate())
                         self.sequence[-1].refresh_state()
                         self.sequence[-2].refresh_state()
@@ -279,8 +283,31 @@ class Chromo:
                         self.sequence.append(route2)
                     del new_route
 
-    def __insert_mutate__(self):
-        pass
+    def __remove_route_mutate__(self):
+        """
+        try to remove the worst route, i.e. served_w and served_v is too little
+        :return: None
+        """
+        for i in range(0, insert_try_time):
+            bad_weight = random.random()
+            invalid_sequence = []
+            bad_route = min(self.sequence, key=lambda x: bad_weight * x.served_w + (1 - bad_weight) * x.served_v)
+            self.sequence.remove(bad_route)
+            for node in bad_route.sequence:
+                if node > custom_number:
+                    continue
+                demand = self.g_map.get_demand(node)
+                cost_increase_list = []
+                for route in self.sequence:
+                    if demand[0] + route.served_w > max_weight or demand[1] + route.served_v > max_volume:
+                        continue
+                    route = route.deepcopy()
+                    cost_increase_list.append(route.try_insert(node))
+                cost_increase_list = np.array(cost_increase_list)
+                if cost_increase_list.min() == huge:
+                    invalid_sequence.append(node)
+                else:
+                    self.sequence[int(np.argmin(cost_increase_list))].try_insert(node)
 
     def __reschedule_mutate__(self):
         """
@@ -351,3 +378,12 @@ class Chromo:
             _sum += len(temp)
         return _sum
 
+    def feasible_generate(self, node_sequence: List[int]):
+        random.shuffle(node_sequence)
+        r_sequence = []
+        current_route = Route(g_map=self.g_map, sequence=[], punish=self.punish, refresh_im=False)
+        node_idx = 0
+        while node_sequence:
+            current_route.sequence.append(node_sequence[node_idx])
+            for node in node_sequence:
+                pass

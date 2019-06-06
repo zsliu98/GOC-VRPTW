@@ -5,7 +5,7 @@ load = True
 save = True  # warning: if save set to be true, it may save the 'nature' to save_dir, which is up to 100MB
 generation_num = 500
 chromo_num = 40
-_punish = 9999
+_punish = 99999
 punish_increase = 1.5  # punish parameter times this number every 10 generation
 save_dir = 'data/nature.pkl'
 
@@ -24,6 +24,7 @@ def main():
         try:
             nature: Nature = pickle_load(save_dir)
             nature.punish = _punish
+            nature.set_new_punish(new_punish=nature.punish)
         except FileNotFoundError:
             print('No "nature" in given direction. New "nature" will be created.')
             nature = Nature(chromo_list=[], chromo_num=chromo_num, g_map=g_map, new_chromo_num=5, punish=_punish)

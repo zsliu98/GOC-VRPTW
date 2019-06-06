@@ -18,6 +18,7 @@ charge_cost = const.wait_cost
 wait_cost = const.wait_cost
 depot_open_time = const.depot_open_time
 unit_trans_cost = const.unit_trans_cost
+huge = const.huge
 
 
 class Route:
@@ -253,7 +254,15 @@ class Route:
         self.sequence[pos1], self.sequence[pos2] = self.sequence[pos2], self.sequence[pos1]
 
     def deepcopy(self):
-        return Route(sequence=self.sequence.copy(), g_map=self.g_map, punish=self.punish)
+        new_route = Route(sequence=self.sequence.copy(), g_map=self.g_map, punish=self.punish, refresh_im=False)
+        new_route.start_time = self.start_time
+        new_route.cost = self.cost
+        new_route.window_punish, new_route.capacity_punish, new_route.weight_punish, new_route.volume_punish = \
+            self.window_punish, self.capacity_punish, self.weight_punish, self.volume_punish
+        new_route.capacity_remain = self.capacity_remain
+        new_route.served_w, new_route.served_v = self.served_w, self.served_v
+        new_route.extra_t = self.extra_t
+        return new_route
 
     def is_equal(self, route):
         if len(self.sequence) != len(route.sequence) or self.cost != route.cost:
@@ -262,3 +271,32 @@ class Route:
             if node1 != node2:
                 return False
         return True
+
+    def get_total_punish(self):
+        return self.capacity_punish + self.window_punish + self.volume_punish + self.weight_punish
+
+    def try_insert(self, node: int):
+        old_cost = self.cost
+        old_punish = self.get_total_punish()
+        try_route_list = []
+        nearby_station = self.g_map.get_nearby_station(node)
+        for insert_pos in range(0, len(self.sequence) + 1):
+            try_sequence = self.sequence.copy()
+            try_sequence.insert(insert_pos, node)
+            try_route_list.append(Route(g_map=self.g_map, sequence=try_sequence, punish=self.punish))
+            try_sequence = self.sequence.copy()
+            try_sequence.insert(insert_pos, node)
+            try_sequence.insert(insert_pos, nearby_station)
+            try_route_list.append(Route(g_map=self.g_map, sequence=try_sequence, punish=self.punish))
+            try_sequence = self.sequence.copy()
+            try_sequence.insert(insert_pos, node)
+            try_sequence.insert(insert_pos + 1, node)
+            try_route_list.append(Route(g_map=self.g_map, sequence=try_sequence, punish=self.punish))
+        best_insert = min(try_route_list, key=lambda x: x.cost)
+        del try_route_list
+        if best_insert.get_total_punish() <= old_punish:
+            self.sequence = best_insert.sequence.copy()
+            self.refresh_state()
+            return self.cost - old_cost
+        else:
+            return huge
