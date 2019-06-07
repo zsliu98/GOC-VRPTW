@@ -4,7 +4,11 @@ cross_p = 0.8  # chromo cross probability
 random_mutate_p = 0.1  # chromo random mutate probability
 combine_try_time = 10  # chromo try combination mutate times per step
 insert_try_time = 5  # chromo try insert mutate times per step
-starve_para = 0.25  # 
+remove_try_p = 0.7  # temporary not use
+starve_para = 0.25
+feasible_generate_p = 0.2
+# when random init chromo, 'feasible_generate_p' of total generate number will generate by 'feasible generate' algorithm
+# warning, feasible generate' algorithm is really time-consuming, don't set this probability too large
 
 center_id = 0  # center depot idx, may not changeable (so don't change this one!)
 custom_number = 1000  # custom number, may not changeable (so don't change this one!)

@@ -4,7 +4,7 @@ from PGA import Nature, Chromo, Route
 load = True
 save = True  # warning: if save set to be true, it may save the 'nature' to save_dir, which is up to 100MB
 generation_num = 500
-chromo_num = 40
+chromo_num = 80
 _punish = 99999
 punish_increase = 1.5  # punish parameter times this number every 10 generation
 save_dir = 'data/nature.pkl'

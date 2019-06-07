@@ -28,6 +28,9 @@ vehicle_cost = const.vehicle_cost
 
 combine_try_time = const.combine_try_time
 insert_try_time = const.insert_try_time
+remove_try_p = const.remove_try_p
+feasible_generate_p = const.feasible_generate_p
+
 huge = const.huge
 
 
@@ -35,13 +38,14 @@ class Chromo:
     g_map: GlobalMap
     sequence: List[Route]
 
-    def __init__(self, sequence=None, g_map=None, idx=0, punish=9999, reset_window=True):
+    def __init__(self, sequence=None, g_map=None, idx=0, punish=9999, reset_window=True, refresh_im=True):
         """
         :param sequence: routes in this chromo, order insensitive
         :param g_map: global map
         :param idx: chromo idx, not necessary
         :param punish: punish parameter
-        :param reset_window: if reset time window when time window punishment occurs
+        :param reset_window: whether reset time window when time window punishment occurs
+        :param refresh_im: whether refresh chromo state after init immediately
         """
         self.idx = idx
         self.g_map = g_map
@@ -54,7 +58,8 @@ class Chromo:
         if self.sequence is None:
             self.sequence = []
             self.__random_init__()
-        self.refresh_state()
+        if refresh_im:
+            self.refresh_state()
 
     def refresh_state(self):
         """
@@ -94,45 +99,46 @@ class Chromo:
         random init this chromo by some prior experience (when no data is given)
         :return: None
         """
-        # shuffle all customer randomly
-        temp_node = list(range(1, custom_number + 1))
-        random.shuffle(temp_node)
-
-        # init all route, i.e. self.sequence
-        capacity = driving_range
-        weight, volume = max_weight, max_volume
-        temp_route = []
-        pre_node = center_id
-        append_time = 0
-        for idx, node in enumerate(temp_node):
-            capacity -= self.g_map.get_distance(pre_node, node)
-            demand = self.g_map.get_demand(node)
-            weight -= demand[0]
-            volume -= demand[1]
-            if capacity < 0 or weight < 0 or volume < 0:
-                insert_station_p = (math.exp(min(weight / max_weight, volume / max_volume)) - 1) / (math.e - 1)
-                if weight < 0 or volume < 0:
-                    insert_station_p = 0
-                next_station = self.g_map.get_nearby_station(pre_node)
-                if self.g_map.get_distance(pre_node, next_station) > capacity:
-                    insert_station_p = 0
-                if random.random() < insert_station_p:
-                    temp_route.append(next_station)
-                    temp_route.append(node)
-                    capacity = driving_range
-                    capacity -= self.g_map.get_distance(next_station, node)
-                    pre_node = node
+        if random.random() < feasible_generate_p:
+            self.sequence = self.feasible_generate(list(range(1, custom_number + 1)))
+        else:
+            # shuffle all customer randomly
+            temp_node = list(range(1, custom_number + 1))
+            random.shuffle(temp_node)
+            # init all route, i.e. self.sequence
+            capacity = driving_range
+            weight, volume = max_weight, max_volume
+            temp_route = []
+            pre_node = center_id
+            for idx, node in enumerate(temp_node):
+                capacity -= self.g_map.get_distance(pre_node, node)
+                demand = self.g_map.get_demand(node)
+                weight -= demand[0]
+                volume -= demand[1]
+                if capacity < 0 or weight < 0 or volume < 0:
+                    insert_station_p = (math.exp(min(weight / max_weight, volume / max_volume)) - 1) / (math.e - 1)
+                    if weight < 0 or volume < 0:
+                        insert_station_p = 0
+                    next_station = self.g_map.get_nearby_station(pre_node)
+                    if self.g_map.get_distance(pre_node, next_station) > capacity:
+                        insert_station_p = 0
+                    if random.random() < insert_station_p:
+                        temp_route.append(next_station)
+                        temp_route.append(node)
+                        capacity = driving_range
+                        capacity -= self.g_map.get_distance(next_station, node)
+                        pre_node = node
+                    else:
+                        temp_route.append(node)
+                        self.sequence.append(Route(sequence=temp_route.copy(), g_map=self.g_map, punish=self.punish))
+                        capacity = driving_range
+                        weight, volume = max_weight, max_volume
+                        temp_route[:] = []
+                        pre_node = center_id
                 else:
                     temp_route.append(node)
-                    self.sequence.append(Route(sequence=temp_route.copy(), g_map=self.g_map, punish=self.punish))
-                    capacity = driving_range
-                    weight, volume = max_weight, max_volume
-                    temp_route[:] = []
-                    pre_node = center_id
-            else:
-                temp_route.append(node)
-                pre_node = node
-        self.sequence.append(Route(sequence=temp_route.copy(), g_map=self.g_map, punish=self.punish))
+                    pre_node = node
+            self.sequence.append(Route(sequence=temp_route.copy(), g_map=self.g_map, punish=self.punish))
 
     def set_punish_para(self, punish):
         """
@@ -166,14 +172,17 @@ class Chromo:
         mutate the chromo, include: split, add, delete, combine, reschedule, random
         :return: None
         """
+        max_d_waste = max(self.sequence, key=lambda x: x.capacity_waste).capacity_remain
+        self.__delete_station_mutate__(max_d_waste)
         max_s = max(self.sequence, key=lambda x: x.window_punish + x.weight_punish + x.volume_punish)
         max_s_punish = max_s.window_punish + max_s.weight_punish + max_s.volume_punish
         self.__split_mutate__(max_s_punish)
         max_a_punish = max(self.sequence, key=lambda x: x.capacity_punish).capacity_punish
         self.__add_station_mutate__(max_a_punish)
-        max_d_remain = max(self.sequence, key=lambda x: x.capacity_remain).capacity_remain
-        self.__delete_station_mutate__(max_d_remain)
+        max_d_waste = max(self.sequence, key=lambda x: x.capacity_waste).capacity_remain
+        self.__delete_station_mutate__(max_d_waste)
         self.__combine_mutate__()
+        self.__remove_route_mutate__()
         self.__reschedule_mutate__()
         if random.random() < random_mutate_p:
             self.__random_reverse_mutate__()
@@ -208,14 +217,9 @@ class Chromo:
             return
         origin_route = self.sequence.copy()
         for route in origin_route:
-            split_p = (math.exp((route.window_punish + route.weight_punish + route.volume_punish) / max_punish) - 1) / (
-                    math.e - 1)
-            if random.random() < split_p:
-                # self.sequence.extend(self.feasible_generate(route.sequence))
-                new_routes = route.split_mutate()
+            if route.window_punish + route.weight_punish + route.volume_punish > 0:
                 self.sequence.remove(route)
-                del route
-                self.sequence.extend(new_routes)
+                self.sequence.extend(self.feasible_generate(route.sequence))
 
     def __add_station_mutate__(self, max_punish):
         """
@@ -227,36 +231,37 @@ class Chromo:
         if max_punish == 0:
             return
         for route in self.sequence:
-            add_p = (math.exp((route.capacity_punish / max_punish)) - 1) / (math.e - 1)
-            if random.random() < add_p:
+            # add_p = (math.exp((route.capacity_punish / max_punish)) - 1) / (math.e - 1)
+            if route.capacity_punish > 0:
                 route.add_mutate()
 
-    def __delete_station_mutate__(self, max_remain):
+    def __delete_station_mutate__(self, max_waste):
         """
         if too much capacity remain, randomly delete a charging station (if exists)
-        :param max_remain: max capacity remain, use for normalization
+        :param max_waste: max capacity waste, use for normalization
         :return: None
         """
         for route in self.sequence:
             if not route.has_customer():
                 self.sequence.remove(route)
-        if max_remain < 0.1 * driving_range:
+        if max_waste < 0.05 * driving_range:
             return
         for route in self.sequence:
-            delete_p = (math.exp(route.capacity_remain / max_remain) - 1) / (math.e - 1)
+            # delete_p = (math.exp(route.capacity_remain / max_waste) - 1) / (math.e - 1)
             if not route.has_customer():
                 self.sequence.remove(route)
-            if random.random() < delete_p:
+            if route.capacity_waste > 0.05 * driving_range:
                 route.delete_mutate()
 
     def __combine_mutate__(self):
         """
         if too much cargo not be delivered in route (i.e. too few customers are served), combine two
+        note that combination is applying 'combine_try_time' times on the 'worst' route
         :return: None
         """
         self.sequence.sort(key=lambda x: x.served_w)
         route_list1 = self.sequence[:combine_try_time]
-        random.shuffle(route_list1)
+        random.shuffle(route_list1)  # introduce randomness
         self.sequence.sort(key=lambda x: x.served_v)
         route_list2 = self.sequence[:combine_try_time]
         random.shuffle(route_list2)
@@ -286,8 +291,10 @@ class Chromo:
     def __remove_route_mutate__(self):
         """
         try to remove the worst route, i.e. served_w and served_v is too little
+        note that remove is applying 'insert_try_time' times on the 'worst' route
         :return: None
         """
+        random.shuffle(self.sequence)  # introduce randomness
         for i in range(0, insert_try_time):
             bad_weight = random.random()
             invalid_sequence = []
@@ -295,19 +302,18 @@ class Chromo:
             self.sequence.remove(bad_route)
             for node in bad_route.sequence:
                 if node > custom_number:
+                    invalid_sequence.append(node)
                     continue
                 demand = self.g_map.get_demand(node)
-                cost_increase_list = []
                 for route in self.sequence:
                     if demand[0] + route.served_w > max_weight or demand[1] + route.served_v > max_volume:
                         continue
-                    route = route.deepcopy()
-                    cost_increase_list.append(route.try_insert(node))
-                cost_increase_list = np.array(cost_increase_list)
-                if cost_increase_list.min() == huge:
-                    invalid_sequence.append(node)
-                else:
-                    self.sequence[int(np.argmin(cost_increase_list))].try_insert(node)
+                    if route.try_insert(node) != huge:
+                        break
+            uninsert_customer = np.array(invalid_sequence)
+            uninsert_customer = uninsert_customer[uninsert_customer <= custom_number]
+            if len(uninsert_customer) != 0:
+                self.sequence.append(Route(g_map=self.g_map, sequence=invalid_sequence, punish=self.punish))
 
     def __reschedule_mutate__(self):
         """
@@ -379,11 +385,65 @@ class Chromo:
         return _sum
 
     def feasible_generate(self, node_sequence: List[int]):
+        r_sequence: List[Route] = []
         random.shuffle(node_sequence)
-        r_sequence = []
-        current_route = Route(g_map=self.g_map, sequence=[], punish=self.punish, refresh_im=False)
-        node_idx = 0
+        node_sequence = node_sequence.copy()
+        capacity = driving_range
+        weight, volume = max_weight, max_volume
+        pre_node = center_id
+        time = depot_open_time
+        node_sequence = np.array(node_sequence)
+        node_sequence = list(node_sequence[node_sequence <= custom_number])
+        node = node_sequence.pop()
+        n_sequence = [node]
         while node_sequence:
-            current_route.sequence.append(node_sequence[node_idx])
-            for node in node_sequence:
-                pass
+            if node <= custom_number:
+                demand = self.g_map.get_demand(node)
+                weight -= demand[0]
+                volume -= demand[1]
+                time = max(time + self.g_map.get_time(pre_node, node), self.g_map.get_window(node)[0]) + unload_time
+                capacity -= self.g_map.get_distance(pre_node, node)
+            else:
+                time += self.g_map.get_time(pre_node, node) + charge_tm
+                capacity = driving_range
+            temp_feasible_list = []
+            temp_feasible_score_list = []
+            for new_node in node_sequence:
+                c_condition = (self.g_map.get_distance(node, new_node)
+                               + self.g_map.get_distance(new_node, self.g_map.get_nearby_station(new_node)) < capacity) \
+                              or (self.g_map.get_distance(node, new_node)
+                                  + self.g_map.get_distance(new_node, center_id) < capacity)
+                new_demand = self.g_map.get_demand(new_node)
+                d_condition = new_demand[0] < weight and new_demand[1] < volume
+                t_condition = time + self.g_map.get_time(node, new_node) < self.g_map.get_window(new_node)[1]
+                if c_condition and d_condition and t_condition:
+                    temp_feasible_list.append(new_node)
+                    para1, para2, para3 = random.random() + 0.15, random.random() + 0.15, random.random() + 0.2
+                    temp_feasible_score_list.append(para1 * self.g_map.get_distance(node, new_node) / driving_range
+                                                    + para2 * self.g_map.get_time(node, new_node)
+                                                    + para3 * max(0, self.g_map.get_window(new_node)[0]
+                                                                  - time - self.g_map.get_time(node, new_node)))
+            if temp_feasible_list:
+                temp_feasible_score_list = np.array(temp_feasible_score_list)
+                best_feasible = temp_feasible_list[int(np.argmin(temp_feasible_score_list))]
+                pre_node = node
+                node = best_feasible
+                node_sequence.remove(node)
+                n_sequence.append(node)
+            else:
+                station = self.g_map.get_nearby_station(node)
+                if node <= custom_number and self.g_map.get_distance(node, station) < capacity:
+                    pre_node = node
+                    node = station
+                    n_sequence.append(node)
+                else:
+                    r_sequence.append(Route(g_map=self.g_map, punish=self.punish, sequence=n_sequence))
+                    capacity = driving_range
+                    weight, volume = max_weight, max_volume
+                    pre_node = center_id
+                    time = depot_open_time
+                    node = node_sequence.pop()
+                    n_sequence = [node]
+        if n_sequence:
+            r_sequence.append(Route(g_map=self.g_map, punish=self.punish, sequence=n_sequence))
+        return r_sequence

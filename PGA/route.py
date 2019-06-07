@@ -30,7 +30,7 @@ class Route:
         :param sequence: node in this route, order sensitive
         :param g_map: global map
         :param punish: punish parameter
-        :param refresh_im: if refresh state after init immediately
+        :param refresh_im: whether refresh route state after init immediately
         """
         self.sequence = sequence
         self.g_map = g_map
@@ -39,6 +39,7 @@ class Route:
         self.cost = 0
         self.window_punish, self.capacity_punish, self.weight_punish, self.volume_punish = 0, 0, 0, 0
         self.capacity_remain = driving_range
+        self.capacity_waste = 0
         self.served_w, self.served_v = 0, 0
         self.extra_t = 0
         if refresh_im:
@@ -55,6 +56,7 @@ class Route:
         self.cost = 0
         self.window_punish, self.capacity_punish, self.weight_punish, self.volume_punish = 0, 0, 0, 0
         self.capacity_remain = driving_range
+        self.capacity_waste = 0
         self.served_w, self.served_v = 0, 0
         self.extra_t = 0
         time = depot_open_time
@@ -72,6 +74,7 @@ class Route:
                 distance += d
                 self.cost += charge_cost + unit_trans_cost * d
                 self.capacity_punish += self.punish * abs(capacity) / driving_range if capacity < 0 else 0
+                self.capacity_waste = max(self.capacity_waste, capacity)
                 capacity = driving_range  # recharge battery
             else:
                 self.cost += unit_trans_cost * d  # regular cost
@@ -206,23 +209,22 @@ class Route:
 
     def delete_mutate(self):
         """
-        delete a station in this route
+        delete a station in this route if not increase punish
         :return: None
         """
-        temp_sequence = np.array(self.sequence)
-        temp_sequence = temp_sequence[temp_sequence > custom_number]
-        if len(temp_sequence) == 0:
-            return
-        delete_pos = random.randint(0, len(temp_sequence) - 1)
-        old_sequence = self.sequence.copy()
-        old_cost = self.cost
-        self.sequence.remove(int(temp_sequence[delete_pos]))
-        self.refresh_state()
-        if self.cost > old_cost:
-            self.sequence = old_sequence.copy()
-            self.refresh_state()
-        del old_sequence
-        del temp_sequence
+        idx = 0
+        while idx < len(self.sequence):
+            node = self.sequence[idx]
+            if node > custom_number:
+                new_sequence = self.sequence.copy()
+                new_sequence.pop(idx)
+                new_route = Route(g_map=self.g_map, punish=self.punish, sequence=new_sequence)
+                if new_route.capacity_punish <= self.capacity_punish:
+                    self.sequence.pop(idx)
+                    idx -= 1
+                    self.refresh_state()
+                    del new_route
+            idx += 1
 
     def reschedule_mutate(self):
         """
