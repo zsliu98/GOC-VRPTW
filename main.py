@@ -1,4 +1,5 @@
-from tools import GlobalMap, pickle_dump, pickle_load
+from tools import GlobalMap
+from tools import pickle_dump, pickle_load
 from PGA import Controller, Nature, Chromo, Route
 
 load = True

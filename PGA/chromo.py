@@ -302,6 +302,7 @@ class Chromo:
             bad_route = min(self.sequence, key=lambda x: bad_weight * x.served_w + (1 - bad_weight) * x.served_v)
             self.sequence.remove(bad_route)
             for node in bad_route.sequence:
+                success = False
                 if node > custom_number:
                     invalid_sequence.append(node)
                     continue
@@ -310,10 +311,13 @@ class Chromo:
                     if demand[0] + route.served_w > max_weight or demand[1] + route.served_v > max_volume:
                         continue
                     if route.try_insert(node) != huge:
+                        success = True
                         break
+                if not success:
+                    invalid_sequence.append(node)
             uninsert_customer = np.array(invalid_sequence)
             uninsert_customer = uninsert_customer[uninsert_customer <= custom_number]
-            if uninsert_customer:
+            if len(uninsert_customer) != 0:
                 self.sequence.append(Route(g_map=self.g_map, sequence=invalid_sequence, punish=self.punish))
 
     def __reschedule_mutate__(self):

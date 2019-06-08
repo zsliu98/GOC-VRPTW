@@ -1,7 +1,8 @@
 from typing import List
 from multiprocessing import Process
 
-from tools import pickle_dump, pickle_load, GlobalMap
+from tools import GlobalMap
+from tools import pickle_dump, pickle_load
 from PGA.nature import Nature
 
 
