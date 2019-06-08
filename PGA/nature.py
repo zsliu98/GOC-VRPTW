@@ -3,8 +3,10 @@ import random
 import numpy as np
 
 from PGA.chromo import Chromo
+import PGA.constant as const
 
-cross_p = 0.8
+cross_p = const.cross_p
+feasible_generate_p = const.feasible_generate_p
 
 
 class Nature:
@@ -44,7 +46,6 @@ class Nature:
         """
         self.__ranking__()
         print('Ranking OK.', end='\t')
-        self.chromo_list = self.chromo_list[:self.chromo_num]
         bad_chromo_list = []
         for chromo in self.chromo_list[int(self.reserve * len(self.chromo_list)):]:
             if random.random() < self.bad_reserve_p:
@@ -83,6 +84,8 @@ class Nature:
         self.__experience_apply__()
         print('Experience Apply OK.', end='\t')
         print('Total {} Chromo.'.format(len(self.chromo_list)))
+        self.__ranking__()
+        self.chromo_list = self.chromo_list[:self.chromo_num]
 
     def get_best(self):
         """
@@ -91,10 +94,10 @@ class Nature:
         """
         return min(self.chromo_list, key=lambda x: x.cost)
 
-    def set_new_punish(self, new_punish):
-        self.punish = new_punish
+    def set_punish_para(self, punish):
+        self.punish = punish
         for chromo in self.chromo_list:
-            chromo.set_punish_para(punish=new_punish)
+            chromo.set_punish_para(punish=punish)
 
     def __ranking__(self):
         """
@@ -167,6 +170,7 @@ class Nature:
     def __experience_apply__(self):
         for chromo in self.chromo_list:
             chromo.remove_duplicate()
+            chromo.sequence.sort(key=lambda route: route.sequence[0])
         self.__ranking__()
         idx = 0
         while idx < len(self.chromo_list) - 1:
@@ -176,6 +180,11 @@ class Nature:
             idx += 1
 
     def __random_add__(self, num: int):
-        for i in range(0, num):
-            self.chromo_list.append(Chromo(sequence=None, g_map=self.g_map, idx=self.max_idx, punish=self.punish))
+        for i in range(0, int(num * feasible_generate_p)):
+            self.chromo_list.append(Chromo(sequence=None, g_map=self.g_map, idx=self.max_idx,
+                                           punish=self.punish, feasible_flag=True))
+            self.max_idx += 1
+        for i in range(int(num * feasible_generate_p), num):
+            self.chromo_list.append(Chromo(sequence=None, g_map=self.g_map, idx=self.max_idx,
+                                           punish=self.punish, feasible_flag=False))
             self.max_idx += 1

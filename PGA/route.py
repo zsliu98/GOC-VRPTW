@@ -42,6 +42,7 @@ class Route:
         self.capacity_waste = 0
         self.served_w, self.served_v = 0, 0
         self.extra_t = 0
+        self.travel_d = 0
         if refresh_im:
             self.refresh_state()
 
@@ -59,6 +60,7 @@ class Route:
         self.capacity_waste = 0
         self.served_w, self.served_v = 0, 0
         self.extra_t = 0
+        self.travel_d = 0
         time = depot_open_time
         distance = 0
         capacity = driving_range
@@ -69,6 +71,7 @@ class Route:
             d = self.g_map.get_distance(pre_node, node)
             t = self.g_map.get_time(pre_node, node)
             capacity -= d
+            self.travel_d += d
             if node > custom_number:
                 time += t + charge_tm
                 distance += d
@@ -103,6 +106,7 @@ class Route:
         d = self.g_map.get_distance(pre_node, center_id)
         t = self.g_map.get_time(pre_node, center_id)
         capacity -= d
+        self.travel_d += d
         self.capacity_remain = capacity
         time += t
         self.cost += unit_trans_cost * d  # regular cost
@@ -246,14 +250,21 @@ class Route:
             self.sequence = copy_sequence
             self.refresh_state()
 
-    def random_mutate(self):
+    def random_reverse_mutate(self):
         """
-        randomly swap two node in thie route
+        randomly swap two node in this route
         :return: None
         """
+        copy_sequence = self.sequence.copy()
+        copy_cost = self.cost
         pos1 = random.randint(0, len(self.sequence) - 1)
         pos2 = random.randint(0, len(self.sequence) - 1)
         self.sequence[pos1], self.sequence[pos2] = self.sequence[pos2], self.sequence[pos1]
+        self.refresh_state()
+        if self.cost > copy_cost:
+            del self.sequence
+            self.sequence = copy_sequence
+            self.refresh_state()
 
     def deepcopy(self):
         new_route = Route(sequence=self.sequence.copy(), g_map=self.g_map, punish=self.punish, refresh_im=False)

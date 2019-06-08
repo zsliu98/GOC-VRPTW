@@ -13,31 +13,26 @@ _punish = 99999
 save_dir = 'data/nature.pkl'
 
 g_map = GlobalMap()
-chromo = Chromo(sequence=None, g_map=g_map)
-f_chromo = Chromo(sequence=chromo.feasible_generate(node_sequence=list(range(1, 1001))), g_map=g_map)
-print(f_chromo.cost)
-print(f_chromo.has_punish_num())
-
-'''
 nature: Nature = pickle_load(save_dir)
 
-best: Chromo = nature.get_best()
+best = nature.get_best()
+_cost = best.cost
+print(_cost)
 
-print(best.get_custom_num())
+r_sequence = []
 
-for idx, route in enumerate(best.sequence):
-    if route.window_punish != 0 or route.capacity_punish != 0:
-        print(route.window_punish, route.capacity_punish, idx, route.sequence)
+for route in best.sequence:
+    r_sequence.append(Route(g_map=g_map, sequence=route.sequence.copy()))
 
-print(best.cost - best.punish * sum(best.has_punish_num()[1:]))
-print(best.sequence[110].capacity_remain)
-best.sequence[110].delete_mutate()
-print("____________")
-
-print(best.vehicle_number)
-print(len(best.sequence))
-'''
-'''for idx, route in enumerate(best.sequence):
-    print(idx, route.sequence)
-
-# _map = GlobalMap()'''
+best = Chromo(g_map=g_map, sequence=r_sequence)
+_cost = best.cost
+print(_cost)
+best.sequence.sort(key=lambda x: x.sequence[0])
+for route in best.sequence[:10]:
+    print(route.sequence)
+print('__________')
+sbest = nature.chromo_list[1]
+sbest.sequence.sort(key=lambda x: x.sequence[0])
+print(sbest.cost)
+for route in sbest.sequence[:10]:
+    print(route.sequence)

@@ -29,7 +29,6 @@ vehicle_cost = const.vehicle_cost
 combine_try_time = const.combine_try_time
 insert_try_time = const.insert_try_time
 remove_try_p = const.remove_try_p
-feasible_generate_p = const.feasible_generate_p
 
 huge = const.huge
 
@@ -38,7 +37,8 @@ class Chromo:
     g_map: GlobalMap
     sequence: List[Route]
 
-    def __init__(self, sequence=None, g_map=None, idx=0, punish=9999, reset_window=True, refresh_im=True):
+    def __init__(self, sequence=None, g_map=None, idx=0, punish=9999,
+                 reset_window=True, refresh_im=True, feasible_flag=True):
         """
         :param sequence: routes in this chromo, order insensitive
         :param g_map: global map
@@ -46,6 +46,7 @@ class Chromo:
         :param punish: punish parameter
         :param reset_window: whether reset time window when time window punishment occurs
         :param refresh_im: whether refresh chromo state after init immediately
+        :param feasible_flag: whether the chromo generate by feasible generator
         """
         self.idx = idx
         self.g_map = g_map
@@ -57,7 +58,7 @@ class Chromo:
         self.rank = 0
         if self.sequence is None:
             self.sequence = []
-            self.__random_init__()
+            self.__random_init__(feasible_flag=feasible_flag)
         if refresh_im:
             self.refresh_state()
 
@@ -94,12 +95,12 @@ class Chromo:
     def reset_rank(self):
         self.rank = 0
 
-    def __random_init__(self):
+    def __random_init__(self, feasible_flag=True):
         """
         random init this chromo by some prior experience (when no data is given)
         :return: None
         """
-        if random.random() < feasible_generate_p:
+        if feasible_flag:
             self.sequence = self.feasible_generate(list(range(1, custom_number + 1)))
         else:
             # shuffle all customer randomly
@@ -183,7 +184,7 @@ class Chromo:
         self.__delete_station_mutate__(max_d_waste)
         self.__combine_mutate__()
         self.__remove_route_mutate__()
-        self.__reschedule_mutate__()
+        # self.__reschedule_mutate__()
         if random.random() < random_mutate_p:
             self.__random_reverse_mutate__()
 
@@ -312,7 +313,7 @@ class Chromo:
                         break
             uninsert_customer = np.array(invalid_sequence)
             uninsert_customer = uninsert_customer[uninsert_customer <= custom_number]
-            if len(uninsert_customer) != 0:
+            if uninsert_customer:
                 self.sequence.append(Route(g_map=self.g_map, sequence=invalid_sequence, punish=self.punish))
 
     def __reschedule_mutate__(self):
@@ -329,7 +330,7 @@ class Chromo:
         :return: None
         """
         mutate_pos = random.randint(0, len(self.sequence) - 1)
-        self.sequence[mutate_pos].random_mutate()
+        self.sequence[mutate_pos].random_reverse_mutate()
 
     def __combine__(self, route1: Route, route2: Route):
         """
