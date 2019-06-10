@@ -7,8 +7,6 @@ from tools import GlobalMap
 from PGA.route import Route
 import PGA.constant as const
 
-random_mutate_p = const.random_mutate_p
-
 center_id = const.center_id
 custom_number = const.custom_number
 station_number = const.station_number
@@ -29,6 +27,8 @@ vehicle_cost = const.vehicle_cost
 combine_try_time = const.combine_try_time
 insert_try_time = const.insert_try_time
 remove_try_p = const.remove_try_p
+random_mutate_p = const.random_mutate_p
+inter_change_p = const.inter_change_p
 
 huge = const.huge
 
@@ -184,8 +184,9 @@ class Chromo:
         self.__delete_station_mutate__(max_d_waste)
         self.__combine_mutate__()
         self.__remove_route_mutate__()
-        # self.__reschedule_mutate__()
-        if random.random() < random_mutate_p:
+        if random.random() < inter_change_p:
+            self.__inter_change__()
+        elif random.random() < random_mutate_p:
             self.__random_reverse_mutate__()
 
     def has_punish_num(self):
@@ -320,14 +321,6 @@ class Chromo:
             if len(uninsert_customer) != 0:
                 self.sequence.append(Route(g_map=self.g_map, sequence=invalid_sequence, punish=self.punish))
 
-    def __reschedule_mutate__(self):
-        """
-        reschedule a random route
-        :return: None
-        """
-        mutate_pos = random.randint(0, len(self.sequence) - 1)
-        self.sequence[mutate_pos].reschedule_mutate()
-
     def __random_reverse_mutate__(self):
         """
         add little perturbation to a random route
@@ -335,6 +328,33 @@ class Chromo:
         """
         mutate_pos = random.randint(0, len(self.sequence) - 1)
         self.sequence[mutate_pos].random_reverse_mutate()
+
+    def __inter_change__(self):
+        """
+        inter change two near nodes in chromo
+        :return: None
+        """
+        node1 = -1
+        route1 = None
+        random.shuffle(self.sequence)
+        for route in self.sequence:
+            temp_sequence = route.sequence.copy()
+            random.shuffle(temp_sequence)
+            for node in temp_sequence:
+                if self.g_map.get_nearby_custom(node) != -1:
+                    node1 = node
+                    route1 = route
+                    break
+            if node1 != -1:
+                break
+        node2 = self.g_map.get_nearby_custom(node1)
+        route2 = None
+        for route in self.sequence:
+            if node2 in route.sequence:
+                route2 = route
+                break
+        route1.sequence[route1.sequence.index(node1)] = node2
+        route2.sequence[route2.sequence.index(node2)] = node1
 
     def __combine__(self, route1: Route, route2: Route):
         """
@@ -398,7 +418,11 @@ class Chromo:
         pre_node = center_id
         time = depot_open_time
         node_sequence = np.array(node_sequence)
+        para1, para2, para3 = random.random() + 0.5, random.random() + 0.2, random.random() + 0.3
         node_sequence = list(node_sequence[node_sequence <= custom_number])
+        node_sequence.sort(reverse=True, key=lambda x: para1 * self.g_map.get_distance(center_id, x) / driving_range
+                                                       + para2 * (self.g_map.get_window(x)[0] - time)
+                                                       + para3 * (self.g_map.get_window(x)[1] - time))
         node = node_sequence.pop()
         n_sequence = [node]
         while node_sequence:
@@ -423,7 +447,7 @@ class Chromo:
                 t_condition = time + self.g_map.get_time(node, new_node) < self.g_map.get_window(new_node)[1]
                 if c_condition and d_condition and t_condition:
                     temp_feasible_list.append(new_node)
-                    para1, para2, para3 = random.random() + 0.15, random.random() + 0.15, random.random() + 0.2
+                    para1, para2, para3 = random.random() + 0.5, random.random() + 0.25, random.random() + 0.25
                     temp_feasible_score_list.append(para1 * self.g_map.get_distance(node, new_node) / driving_range
                                                     + para2 * self.g_map.get_time(node, new_node)
                                                     + para3 * max(0, self.g_map.get_window(new_node)[0]

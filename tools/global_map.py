@@ -11,6 +11,7 @@ class GlobalMap:
         self.distance_table = dt.read_distance()
         self.node_table = dt.read_node()
         self.nearby_station_list = []
+        self.nearby_custom_list = []
         self.warning = warning
         self.initialize()
 
@@ -76,12 +77,26 @@ class GlobalMap:
             print('Error may occur. Nearby station has been asked of a station.')
         return self.nearby_station_list[idx]
 
+    def get_nearby_custom(self, idx):
+        """
+        return the most 'nearest' customer of the customer
+        :param idx: customer id
+        :return: 'nearest' customer id
+        """
+        if idx > 1000:
+            if self.warning:
+                print('Error may occur. Nearby custom has been asked of a custom.')
+            return -1
+        else:
+            return self.nearby_custom_list[idx]
+
     def initialize(self):
         """
-        remove un-useful edges in the map
         set nearby station of every customer
+        set 'nearby' customer of every customer
         :return: None
         """
+        # set nearby station of every customer, evaluated by distance
         for i in range(0, 1001):
             temp_station_d = self.distance_table['distance'][self.__get_index__(i, 1001):self.__get_index__(i, 1100)]
             self.nearby_station_list.append(np.argmin(np.array(temp_station_d)) + 1001)
@@ -95,6 +110,31 @@ class GlobalMap:
                     min_d = self.distance_table['distance'][self.__get_index__(i, j)]
                     min_pos = j
             self.nearby_station_list.append(min_pos)
+
+        # set 'nearby' customer of every customer, evaluated by distance, demand and time window
+        self.nearby_custom_list.append(-1)
+        for i in range(1, 1001):
+            min_d = 99999999
+            min_pos = -1
+            demand = self.get_demand(i)
+            time = self.get_window(i)
+            for j in range(1, 1001):
+                if i == j:
+                    continue
+                else:
+                    n_dist = self.distance_table['distance'][self.__get_index__(i, j)]
+                    n_demand = self.get_demand(j)
+                    n_time = self.get_window(j)
+                    if abs(demand[0] - n_demand[0]) >= 0.35 or abs(demand[1] - n_demand[1]) >= 7 or n_dist >= 10000:
+                        continue
+                    if abs(time[0] - n_time[0]) >= 0.5 or abs(time[1] - n_time[1]) >= 1:
+                        continue
+                    n_d = abs(demand[0] - n_demand[0]) / 2.5 + 0.1 * abs(demand[1] - n_demand[1]) / 16 + n_dist / 120000
+                    n_d += abs(time[0] - n_time[0]) + abs(time[1] - n_time[1])
+                    if n_d < min_d:
+                        min_d = n_d
+                        min_pos = j
+            self.nearby_custom_list.append(min_pos)
 
     @staticmethod
     def __get_index__(idx, idy):

@@ -2,6 +2,7 @@ huge = 999999999  # nothing but the largest number during calculation, just for 
 
 cross_p = 0.8  # chromo cross probability
 random_mutate_p = 0.1  # chromo random mutate probability
+inter_change_p = 0.5
 combine_try_time = 10  # chromo try combination mutate times per step
 insert_try_time = 5  # chromo try insert mutate times per step
 remove_try_p = 0.7  # temporary not use

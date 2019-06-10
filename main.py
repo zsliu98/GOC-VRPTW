@@ -5,9 +5,9 @@ from PGA import Controller, Nature, Chromo, Route
 load = True
 save = True  # warning: if save set to be true, it may save the 'nature' to save_dir, which is up to 100MB
 generation_num = 500
-chromo_num = 4
-_punish = 99999
-nature_num = 3
+chromo_num = 2
+_punish = 9999
+nature_num = 2
 punish_increase = 1.5  # punish parameter times this number every 10 generation
 save_dir = 'data'
 read_dir = 'data'
