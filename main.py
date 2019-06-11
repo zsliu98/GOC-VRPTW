@@ -3,12 +3,12 @@ from tools import pickle_dump, pickle_load
 from PGA import Controller, Nature, Chromo, Route
 
 load = True
-save = True  # warning: if save set to be true, it may save the 'nature' to save_dir, which is up to 100MB
-generation_num = 500
-chromo_num = 2
-_punish = 9999
-nature_num = 2
-punish_increase = 1.5  # punish parameter times this number every 10 generation
+save = True  # warning: if save set to be true, it may save the 'controller' to save_dir, which is up to 100MB
+generation_num = 500  # can set this number very large, cause it will store the calculation process each 10 generation
+chromo_num = 100  # chromo number in each nature, if too small may lead to early convergence
+_punish = 9999  # punish parameter, if too big may weaken the influence of mutation
+nature_num = 5  # nature number, each nature will operate in one subprocess, don't set it larger than the number of CPU
+punish_increase = 1.2  # punish parameter times this number every 10 generation
 save_dir = 'data'
 read_dir = 'data'
 

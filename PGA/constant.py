@@ -2,14 +2,18 @@ huge = 999999999  # nothing but the largest number during calculation, just for 
 
 cross_p = 0.8  # chromo cross probability
 random_mutate_p = 0.1  # chromo random mutate probability
-inter_change_p = 0.5
+remove_mutate_p = 0.5  # remove the 'worst' route probability, opposite of it is direct restart probability
+inter_change_p = 0.8  # interchange probability, opposite of it is random reverse probability
 combine_try_time = 10  # chromo try combination mutate times per step
-insert_try_time = 5  # chromo try insert mutate times per step
+insert_try_time = 10  # chromo try insert mutate times per step
 remove_try_p = 0.7  # temporary not use
+restart_p = 0.01  # restart probability (when even introduce more distance cost)
 starve_para = 0.25
 feasible_generate_p = 0.2
 # when random init chromo, 'feasible_generate_p' of total generate number will generate by 'feasible generate' algorithm
 # warning, feasible generate' algorithm is really time-consuming, don't set this probability too large
+perturb_generate_p = 0.2
+# when random init chromo, it is the probability the node swap with the next node in the sorted node sequence
 
 center_id = 0  # center depot idx, may not changeable (so don't change this one!)
 custom_number = 1000  # custom number, may not changeable (so don't change this one!)

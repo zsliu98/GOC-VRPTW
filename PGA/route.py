@@ -1,6 +1,5 @@
 from typing import List
 import random
-import numpy as np
 
 from tools import GlobalMap
 import PGA.constant as const
@@ -267,6 +266,10 @@ class Route:
             self.refresh_state()
 
     def deepcopy(self):
+        """
+        return a deep copy of itself, copy all except g_map
+        :return: copy route
+        """
         new_route = Route(sequence=self.sequence.copy(), g_map=self.g_map, punish=self.punish, refresh_im=False)
         new_route.start_time = self.start_time
         new_route.cost = self.cost
@@ -278,6 +281,11 @@ class Route:
         return new_route
 
     def is_equal(self, route):
+        """
+        examine whether this route is equal to another route
+        :param route: another route
+        :return: True if equal
+        """
         if len(self.sequence) != len(route.sequence) or self.cost != route.cost:
             return False
         for node1, node2 in zip(self.sequence, route.sequence):
@@ -289,6 +297,11 @@ class Route:
         return self.capacity_punish + self.window_punish + self.volume_punish + self.weight_punish
 
     def try_insert(self, node: int):
+        """
+        try to insert a node into this route, ensure no extra punish
+        :param node: the node to be inserted
+        :return: cost change, if cannot insert will return huge
+        """
         old_cost = self.cost
         old_punish = self.get_total_punish()
         try_route_list = []

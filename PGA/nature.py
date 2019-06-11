@@ -41,7 +41,7 @@ class Nature:
 
     def operate(self):
         """
-        operate the nature, include rank, select, cross, mutate, new add
+        operate the nature, include rank, select, cross, mutate, new add, experience apply
         :return: None
         """
         self.__ranking__()
@@ -52,11 +52,12 @@ class Nature:
                 bad_chromo_list.append(chromo)
         self.chromo_list = self.chromo_list[:int(self.reserve * len(self.chromo_list))]
         self.chromo_list.extend(bad_chromo_list)
+        print('Select OK {}.'.format(len(self.chromo_list)), end='\t')
         self.__random_add__(self.new_chromo_num)
+        print('New Chromo Add OK {}.'.format(self.new_chromo_num), end='\t')
         old_chromo_list = []
         for chromo in self.chromo_list:
             old_chromo_list.append(chromo.deepcopy())
-        print('Select OK {}.'.format(len(self.chromo_list)), end='\t')
         chromo_copy1 = self.chromo_list[::2]
         chromo_copy2 = self.chromo_list[1::2]
         random.shuffle(chromo_copy2)
@@ -80,7 +81,7 @@ class Nature:
         print('Mutate OK.', end='\t')
         add_num = self.chromo_num - len(self.chromo_list)
         self.__random_add__(num=add_num)
-        print('New Chromo Add OK {}.'.format(max(add_num, 0)), end='\t')
+
         self.__experience_apply__()
         print('Experience Apply OK.', end='\t')
         print('Total {} Chromo.'.format(len(self.chromo_list)))
@@ -107,29 +108,6 @@ class Nature:
         for chromo in self.chromo_list:
             chromo.refresh_state()
         self.chromo_list.sort(key=lambda x: x.cost)
-        '''for chromo in self.chromo_list:
-            chromo.reset_rank()
-        temp_list = self.chromo_list.copy()
-        while temp_list:
-            cost_min = 1e10
-            cost_bound = 0
-            vehicle_num_min = 1e5
-            vehicle_num_bound = 0
-            rank = 0
-            for chromo in temp_list:
-                cost, vehicle_num = chromo.get_score()
-                if cost < cost_min:
-                    cost_min = cost
-                    vehicle_num_bound = vehicle_num
-                if vehicle_num < vehicle_num_min:
-                    vehicle_num_min = vehicle_num
-                    cost_bound = cost
-            for chromo in temp_list:
-                cost, vehicle_num = chromo.get_score()
-                if cost <= cost_bound or vehicle_num <= vehicle_num_bound:
-                    chromo.rank = rank
-                    temp_list.remove(chromo)
-        self.chromo_list.sort(key=lambda x: x.rank)'''
 
     @staticmethod
     def __crossover__(chromo1: Chromo, chromo2: Chromo):
@@ -168,6 +146,10 @@ class Nature:
         pass
 
     def __experience_apply__(self):
+        """
+        apply experience on all chromo, include remove duplicate in single chromo and among chromo
+        :return:
+        """
         for chromo in self.chromo_list:
             chromo.remove_duplicate()
             chromo.sequence.sort(key=lambda route: route.sequence[0])
@@ -180,6 +162,11 @@ class Nature:
             idx += 1
 
     def __random_add__(self, num: int):
+        """
+        random add num of chromo in this nature
+        :param num: the number of new chromo
+        :return: None
+        """
         for i in range(0, int(num * feasible_generate_p)):
             self.chromo_list.append(Chromo(sequence=None, g_map=self.g_map, idx=self.max_idx,
                                            punish=self.punish, feasible_flag=True))
