@@ -1,7 +1,8 @@
 # GOC-VRPTW
 Implement Genetic Algorithm on Vehicle Routing Problem with Time Windows, Recharging Stations and other Constraints
 ## Code Structure
-- main.py: run this will start the genetic algorithm directly, before this you may take a look at the parameter statement; also, if you want to restart the algorithm please all `controller.pkl` and `nature*.pkl` in `save_dir`
+- main.py: run this will start the genetic algorithm directly, before this you may take a look at the parameter statement; also, if you want to restart the algorithm please delete all `controller.pkl` and `nature*.pkl` in `save_dir`
+- test.py: read the best route from `save_dir` and present it
 - data: store the data, include `input_distance-time.csv`, `input_node.xlsx` and `input_vehicle_type.xlsx`, the output will also be put here by default
 - tools: include several tools used in this programme
     - data_taker.py: take data from data folder
@@ -13,7 +14,6 @@ Implement Genetic Algorithm on Vehicle Routing Problem with Time Windows, Rechar
     - chromo.py: chromosome, where route(gene) in
     - route.py: route(gene)
     - constant.py: all constant used in genetic algorithm
-    - test.py: read the best route from `save_dir` and present it
 
 ## Parameter Statement
 Here only introduce the parameters in main.py, not parameters in PGA/constant.py.

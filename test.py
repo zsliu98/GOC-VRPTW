@@ -15,7 +15,7 @@ controller: Controller = pickle_load(save_dir)
 
 best = controller.get_best()
 _cost = best.cost
-print(_cost)
+print('Big Car Cost:{}'.format(_cost))
 
 for route in best.sequence:
     if route.capacity_remain >= 20000 and route.capacity_waste >= 20000 and route.served_w <= 2 and route.served_v <= 12:
@@ -24,8 +24,10 @@ for route in best.sequence:
         if route.start_time <= 9.5:
             _cost -= 100
     print("served_w:{0:.5f}, served_v:{1:.5f}, start_tm:{2:.5f}, capacity_waste:{3:.5f}".format(route.served_w, route.served_v, route.start_time, max(route.capacity_waste, route.capacity_remain)), route.sequence)
-print(best.get_custom_num())
-print(_cost)
+print('Customer Number:{}'.format(best.get_custom_num()))
+print('Route Number:{}'.format(len(best.sequence)))
+print('Vehicle Number:{}'.format(best.vehicle_number))
+print('Final Cost:{}'.format(_cost))
 '''
 g_map = GlobalMap()
 for i in range(1, 1001):
